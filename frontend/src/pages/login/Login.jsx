@@ -1,3 +1,5 @@
+//Login.jsx
+
 import { useState } from 'react';
 import {
   Lock,
@@ -8,6 +10,7 @@ import {
   UserPlus,
   ArrowLeft,
 } from 'lucide-react';
+import '../../App.css';
 const Login = ({ onLogin }) => {
   const [isRegistering, setIsRegistering] = useState(false);
 

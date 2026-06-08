@@ -1,3 +1,4 @@
+//airportsData.j 
 export const AIRPORTS = {
   ivato: {
     name: "Aéroport d'Ivato",
