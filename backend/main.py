@@ -23,12 +23,16 @@ from fastapi import FastAPI, HTTPException, Depends  # Le cœur de FastAPI
 from fastapi.middleware.cors import CORSMiddleware   # Pour autoriser les requêtes cross-origin (React → FastAPI)
 from pydantic import BaseModel                       # Pour valider et typer les données reçues
 from typing import Optional                          # Pour les champs facultatifs
-#import mysql.connector                               # Le connecteur officiel MySQL pour Python
+from dotenv import load_dotenv                     # Pour charger les variables d'environnement depuis un fichier .env
+import mysql.connector                               # Le connecteur officiel MySQL pour Python
 import bcrypt                                        # Pour hacher (chiffrer) les mots de passe
 import secrets                                       # Pour générer des tokens de session sécurisés
 import os                                            # Pour lire des variables d'environnement
 
 # ── CONFIGURATION ─────────────────────────────────────────────────────────────
+
+load_dotenv()
+
 
 """
 POURQUOI des variables d'environnement ?

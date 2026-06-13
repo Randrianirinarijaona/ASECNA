@@ -23,19 +23,44 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const endpoint = isRegistering ? 'register' : 'login';
-    const body = isRegistering 
-      ? { username, password, role, admin_key: adminKey }
-      : { username, password };
+    if (isRegistering && password !== confirmPassword) {
+      alert("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    const endpoint = isRegistering ? "register" : "login";
+
+    const body = isRegistering
+      ? {
+          username,
+          password,
+          role,
+          admin_key: adminKey,
+        }
+      : {
+          username,
+          password,
+        };
 
     try {
-      const response = await fetch(`http://localhost:8000/${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      console.log("Envoi vers :", `http://localhost:8000/${endpoint}`);
+      console.log("Body :", body);
+
+      const response = await fetch(
+        `http://localhost:8000/${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
       const data = await response.json();
+
+      console.log("Status :", response.status);
+      console.log("Réponse :", data);
 
       if (!response.ok) {
         alert(data.detail || "Une erreur est survenue");
@@ -46,9 +71,14 @@ const Login = ({ onLogin }) => {
         alert("Inscription réussie !");
         setIsRegistering(false);
       } else {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("username", data.username);
+        localStorage.setItem("role", data.role);
+
         onLogin(data.username, data.role);
       }
-    } catch {
+    } catch (error) {
+      console.error("Erreur :", error);
       alert("Impossible de contacter le serveur.");
     }
   };
