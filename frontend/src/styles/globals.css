@@ -1,0 +1,7 @@
+@import './variables.css';
+@import './reset.css';
+
+/* Importations des autres CSS */
+@import '../components/ui/Button.css';
+@import '../components/ui/Badge.css';
+/* ... autres imports */

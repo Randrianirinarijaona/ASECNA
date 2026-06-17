@@ -1,0 +1,31 @@
+.airport-marker {
+  width: 28px;
+  height: 28px;
+  background: #6366f1;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s;
+  position: relative;
+}
+
+.airport-marker:hover,
+.airport-marker.selected {
+  transform: scale(1.2);
+}
+
+.marker-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-card);
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  z-index: 1000;
+  font-size: 0.875rem;
+  pointer-events: none;
+}

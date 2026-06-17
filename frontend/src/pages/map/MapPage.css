@@ -1,0 +1,33 @@
+.map-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.map-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.map-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+.map-leaflet {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #64748b;
+  font-size: 1.1rem;
+  z-index: 1000;
+  pointer-events: none;
+}

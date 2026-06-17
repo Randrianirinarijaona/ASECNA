@@ -1,0 +1,12 @@
+.badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-admin { background: #7c3aed; color: white; }
+.badge-client { background: #64748b; color: white; }
+.badge-active { background: #22c55e; color: white; }
+.badge-inactive { background: #ef4444; color: white; }
