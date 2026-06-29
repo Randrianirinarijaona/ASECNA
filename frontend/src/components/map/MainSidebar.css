@@ -1,0 +1,137 @@
+.main-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+  gap: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.main-sidebar-header {
+  padding: 0 4px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.main-sidebar-title {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #6366f1;
+}
+
+.main-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.main-sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.main-sidebar-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.main-sidebar-btn--active {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+.main-sidebar-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px dashed #c7d2fe;
+  border-radius: 10px;
+  background: #fff;
+  color: #6366f1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.main-sidebar-add-btn:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.main-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.network-category-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #334155;
+  cursor: pointer;
+}
+
+.chevron {
+  transition: transform 0.15s ease;
+  color: #94a3b8;
+}
+
+.chevron--open {
+  transform: rotate(180deg);
+}
+
+.network-subitem-list {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.network-subitem-btn {
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  color: #475569;
+  cursor: pointer;
+}
+
+.network-subitem-btn:hover {
+  background: #eef2ff;
+  color: #6366f1;
+}

@@ -59,18 +59,28 @@ export interface Flight {
 //   iata: string;
 //   coords: [number, number];
 //   markerClass: string;
-//   details: AirportDetail[];
-//   flights?: Flight[];
+//   //Nouvelle propriété pour le contenu dynamique
+//   sections: {
+//     sfa?: string[];
+//     sma?: string[];
+//     srna?: string[];
+//     // Tu peux ajouter d'autres sections facilement
+//     [key: string]: string[] | undefined;
+//   };
 // }
+export interface AirportSectionItem {
+    title: string;
+    description?: string;
+    details?: string[];
+    status?: 'operational' | 'maintenance' | 'planned';
+    // Tu peux ajouter d'autres champs : date, responsable, etc.
+}
 
 export interface Airport {
-
-  name: string;
-
-  iata: string;
-
-  coords: [number, number];
-
-  markerClass: string;
-
+    name: string;
+    iata: string;
+    coords: [number, number];
+    sections: {
+        [key: string]: AirportSectionItem[];   // Changement ici
+    };
 }

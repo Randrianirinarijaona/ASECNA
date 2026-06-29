@@ -1,3 +1,4 @@
+//admin.tsx
 import { useCallback, useState } from 'react';
 import {
   Users, ShieldCheck, UserCheck, Activity,
