@@ -1,0 +1,14 @@
+.network-item-modal {
+  max-width: 720px;
+}
+
+.sub-parameter-card {
+  border-left: 4px solid #3b82f6;
+}
+
+.network-item-detail {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}

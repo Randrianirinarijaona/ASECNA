@@ -2,7 +2,8 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: var(--color-bg);
+  background-image: url(../../image/font.jpg);
+  background-size: cover;
   padding: 1rem;
   position: relative;
   overflow: hidden;
@@ -35,7 +36,6 @@
 }
 
 .login-card {
-  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 2.25rem;
@@ -53,15 +53,15 @@
 }
 
 .login-badge {
-  width: 52px;
-  height: 52px;
-  background: linear-gradient(135deg, var(--color-accent), #8b5cf6);
+  width: 90px;
+  height: 90px;
+  background-image: url(../../image/logo.png);
+  background-size: cover;
   border-radius: 14px;
   display: grid;
   place-items: center;
   color: #fff;
   margin: 0 auto 1rem;
-  box-shadow: 0 4px 16px rgba(99,102,241,0.3);
 }
 
 .login-title {
@@ -160,7 +160,7 @@
 .login-input {
   width: 100%;
   padding: 10px 12px 10px 36px;
-  background: var(--color-surface-alt);
+  background: none;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--color-text);

@@ -3,6 +3,10 @@ import { X, Trash2, Plus, ShieldCheck, AlertTriangle } from 'lucide-react';
 import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
+
+// Import du nouveau modal
+import NetworkItemModal from './NetworkItemModal';
+
 // @ts-ignore: Allow side-effect CSS import without type declarations
 import './NetworkModal.css';
 
@@ -19,13 +23,12 @@ interface NetworkModalProps {
   onDeleteAirport: (key: string) => void;
   onAddItem: (category: NetworkCategoryKey, item: NetworkItemInput) => void;
   onDeleteItem: (category: NetworkCategoryKey, title: string) => void;
-  onUpdateItemStatus: (
+  onUpdateItemStatus?: (
     category: NetworkCategoryKey,
     title: string,
     status: 'operational' | 'maintenance'
-  ) => void; // ← nouveau
+  ) => void;
 }
-
 
 const CATEGORIES: NetworkCategoryKey[] = ['sfa', 'sma', 'srna'];
 
@@ -40,6 +43,13 @@ export default function NetworkModal({
 }: NetworkModalProps) {
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
+
+  // ←←← NOUVEL ÉTAT POUR LE MODAL DÉTAILLÉ
+  const [selectedItem, setSelectedItem] = useState<{
+    title: string;
+    status: 'operational' | 'maintenance';
+    description?: string;
+  } | null>(null);
 
   const handleAddSubmit = (category: NetworkCategoryKey) => {
     if (!newTitle.trim()) return;
@@ -98,7 +108,16 @@ export default function NetworkModal({
 
                 <div className="network-item-grid">
                   {items.map((item) => (
-                    <div key={item.title} className="network-item-card">
+                    <div
+                      key={item.title}
+                      className="network-item-card"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedItem({
+                        title: item.title,
+                        status: item.status || 'operational',
+                        description: item.description,
+                      })}
+                    >
                       <div className="network-item-card-top">
                         <span className={`status-dot status-dot--${item.status || 'operational'}`} />
                         <span className="network-item-title">{item.title}</span>
@@ -106,7 +125,10 @@ export default function NetworkModal({
                           <button
                             className="icon-btn icon-btn--danger icon-btn--sm"
                             title="Supprimer"
-                            onClick={() => onDeleteItem(category, item.title)}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Empêche l'ouverture du modal en cliquant sur supprimer
+                              onDeleteItem(category, item.title);
+                            }}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -147,6 +169,23 @@ export default function NetworkModal({
             );
           })}
         </div>
+
+        {/* ====================== MODAL DÉTAILLÉ ====================== */}
+        {selectedItem && (
+          <NetworkItemModal
+            itemTitle={selectedItem.title}
+            itemStatus={selectedItem.status}
+            itemDescription={selectedItem.description}
+            airportName={airport.name}
+            isAdmin={isAdmin}
+            onClose={() => setSelectedItem(null)}
+            onUpdateItem={(newTitle, newStatus, newDesc) => {
+              console.log('Mise à jour item:', newTitle, newStatus, newDesc);
+              // Tu pourras plus tard mettre à jour le state de l'aéroport ici
+              setSelectedItem(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

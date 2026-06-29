@@ -76,7 +76,6 @@ export default function Login() {
         {/* Header */}
         <div className="login-header">
           <div className="login-badge">
-            {isRegistering ? <UserPlus size={24} /> : <PlaneTakeoff size={24} />}
           </div>
           <h1 className="login-title">{isRegistering ? 'Create account' : 'ASECNA'}</h1>
           <p className="login-subtitle">
