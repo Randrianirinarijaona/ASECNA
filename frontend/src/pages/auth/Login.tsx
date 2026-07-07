@@ -1,13 +1,13 @@
+//login.tsx
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Lock, User, PlaneTakeoff, ShieldCheck, UserCircle,
-  UserPlus, ArrowLeft, Eye, EyeOff, AlertCircle,
+  Lock, User, ShieldCheck, UserCircle, GraduationCap,
+  ArrowLeft, Eye, EyeOff, AlertCircle,
 } from 'lucide-react';
 import { useAuth, useToast } from '../../hooks';
 import { validatePassword } from '../../utils/jwt';
 import type { Role } from '../../types';
-//import '../../App.css';
 import './Login.css';
 
 export default function Login() {
@@ -21,8 +21,10 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<Role>('client');
+  // Rôle par défaut désormais 'user' (visualisation, aucune contrainte à l'inscription)
+  const [role, setRole] = useState<Role>('user');
   const [adminKey, setAdminKey] = useState('');
+  const [validationCode, setValidationCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -34,6 +36,8 @@ export default function Login() {
       if (pwErr) return pwErr;
       if (password !== confirmPassword) return 'Passwords do not match';
       if (role === 'admin' && !adminKey.trim()) return 'Admin key is required';
+      if (role === 'technicien' && !validationCode.trim()) return 'Un code de validation est requis pour un compte Technicien';
+      // role === 'user' : aucune contrainte supplémentaire
     } else {
       if (!password) return 'Password is required';
     }
@@ -49,10 +53,10 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       if (isRegistering) {
-        await register({ username, password, confirmPassword, role, adminKey });
+        await register({ username, password, confirmPassword, role, adminKey, validationCode });
         showToast('Account created! Please log in.', 'success');
         setIsRegistering(false);
-        setPassword(''); setConfirmPassword(''); setAdminKey('');
+        setPassword(''); setConfirmPassword(''); setAdminKey(''); setValidationCode('');
       } else {
         await login({ username, password });
         showToast(`Welcome back, ${username}!`, 'success');
@@ -77,9 +81,9 @@ export default function Login() {
         <div className="login-header">
           <div className="login-badge">
           </div>
-          <h1 className="login-title">{isRegistering ? 'Create account' : 'ASECNA'}</h1>
+          <h1 className="login-title">{isRegistering ? 'Create account' : 'Agence pour la Securité de la Navigation Aerienne'}</h1>
           <p className="login-subtitle">
-            {isRegistering ? 'Madagascar Terminals access' : 'Madagascar Terminals'}
+            {isRegistering ? 'Madagascar Terminals access' : 'ASECNA Liaison'}
           </p>
         </div>
 
@@ -88,11 +92,19 @@ export default function Login() {
           <div className="role-tabs">
             <button
               type="button"
-              className={`role-tab ${role === 'client' ? 'role-tab--active' : ''}`}
-              onClick={() => setRole('client')}
+              className={`role-tab ${role === 'user' ? 'role-tab--active' : ''}`}
+              onClick={() => setRole('user')}
             >
               <UserCircle size={16} />
               User
+            </button>
+            <button
+              type="button"
+              className={`role-tab ${role === 'technicien' ? 'role-tab--active' : ''}`}
+              onClick={() => setRole('technicien')}
+            >
+              <GraduationCap size={16} />
+              Technicien
             </button>
             <button
               type="button"
@@ -176,6 +188,24 @@ export default function Login() {
                   autoComplete="new-password"
                 />
               </div>
+            </div>
+          )}
+
+          {/* Code de validation (Technicien uniquement) */}
+          {isRegistering && role === 'technicien' && (
+            <div className="login-field">
+              <label className="login-label login-label--admin">
+                <Lock size={11} /> Code de validation
+              </label>
+              <input
+                type="text"
+                value={validationCode}
+                onChange={(e) => setValidationCode(e.target.value)}
+                className="login-input login-input--admin"
+                placeholder="Entrez le code de validation Technicien"
+                required
+              />
+              <p className="login-hint">Requis pour créer un compte Technicien</p>
             </div>
           )}
 

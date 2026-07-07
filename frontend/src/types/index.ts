@@ -1,6 +1,6 @@
 // ─── Auth & Users ───────────────────────────────────────────────────────────
 
-export type Role = 'admin' | 'client';
+export type Role = 'admin' | 'technicien' | 'user';
 
 export interface User {
   id: string;
@@ -30,7 +30,8 @@ export interface RegisterPayload {
   password: string;
   confirmPassword: string;
   role: Role;
-  adminKey?: string;
+  adminKey?: string;       // requis si role === 'admin'
+  validationCode?: string; // requis si role === 'technicien'
 }
 
 export interface AuthResponse {
@@ -54,20 +55,6 @@ export interface Flight {
   duree: string;
 }
 
-// export interface Airport {
-//   name: string;
-//   iata: string;
-//   coords: [number, number];
-//   markerClass: string;
-//   //Nouvelle propriété pour le contenu dynamique
-//   sections: {
-//     sfa?: string[];
-//     sma?: string[];
-//     srna?: string[];
-//     // Tu peux ajouter d'autres sections facilement
-//     [key: string]: string[] | undefined;
-//   };
-// }
 export interface AirportSectionItem {
     title: string;
     description?: string;
@@ -82,5 +69,19 @@ export interface Airport {
     coords: [number, number];
     sections: {
         [key: string]: AirportSectionItem[];   // Changement ici
+    };
+
+}
+
+export interface Airport {
+    name: string;
+    iata: string;
+    coords: [number, number];
+    // Nouveau : distingue un vrai aéroport d'un simple point technique
+    // (relais VHF/HF, antenne SRNA...) créé depuis "Réseau local" ou
+    // depuis les boutons "Ajouter un réseau" de la sidebar.
+    isTechnicalPoint?: boolean;
+    sections: {
+        [key: string]: AirportSectionItem[];
     };
 }

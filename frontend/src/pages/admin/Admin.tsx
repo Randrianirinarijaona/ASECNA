@@ -9,7 +9,7 @@ import { userService, adminService } from '../../services/api.service';
 import { useApi, useMutation } from '../../hooks/useApi';
 import { Table, type Column } from '../../components/ui/Table';
 import { ConfirmModal, Modal } from '../../components/ui/Modal';
-import type { User } from '../../types';
+import type { User, Role } from '../../types';
 // @ts-ignore: CSS module declaration not available in this project setup
 import './Admin.css';
 
@@ -33,7 +33,7 @@ export default function Admin() {
   const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [editTarget, setEditTarget] = useState<User | null>(null);
-  const [editRole, setEditRole] = useState<'admin' | 'client'>('client');
+  const [editRole, setEditRole] = useState<Role>('user');
 
   // Fetch stats
   const statsFetcher = useCallback(() => adminService.getStats(), []);
@@ -51,9 +51,9 @@ export default function Admin() {
   const { execute: toggleActive } = useMutation(({ id, isActive }: { id: string; isActive: boolean }) =>
     userService.toggleActive(id, isActive)
   );
-  const { execute: changeRole } = useMutation(({ id, role }: { id: string; role: 'admin' | 'client' }) =>
-    userService.changeRole(id, role)
-  );
+  const { execute: changeRole } = useMutation(({ id, role }: { id: string; role: Role }) =>
+  userService.changeRole(id, role)
+);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -81,6 +81,8 @@ export default function Admin() {
     setEditTarget(null);
     refetch();
   };
+
+  
 
   const columns: Column<User>[] = [
     {
@@ -232,18 +234,18 @@ export default function Admin() {
           </div>
         }
       >
-        <div className="role-selector">
-          {(['client', 'admin'] as const).map((r) => (
-            <button
-              key={r}
-              className={`role-option ${editRole === r ? 'role-option--active' : ''}`}
-              onClick={() => setEditRole(r)}
+      <div className="role-selector">
+        {(['user', 'technicien', 'admin'] as const).map((r) => (
+          <button
+            key={r}
+            className={`role-option ${editRole === r ? 'role-option--active' : ''}`}
+            onClick={() => setEditRole(r)}
             >
-              {r === 'admin' ? <ShieldCheck size={16} /> : <Users size={16} />}
-              <span className="role-option-label">{r}</span>
-            </button>
-          ))}
-        </div>
+            {r === 'admin' ? <ShieldCheck size={16} /> : <Users size={16} />}
+            <span className="role-option-label">{r}</span>
+          </button>
+        ))}
+      </div>
       </Modal>
     </div>
   );

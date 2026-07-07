@@ -15,6 +15,16 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
   srna: 'SRNA',
 };
 
+// À ajouter dans networkCategories.ts, sous NetworkItem
+
+export interface NetworkLink {
+  id: string;
+  category: NetworkCategoryKey;
+  itemTitle: string;       // le paramètre concerné (ex: "AMHS/RSFTA")
+  fromAirportKey: string;
+  toAirportKey: string;
+}
+
 // Sous-réseaux "officiels" par catégorie, tels que demandés dans le cahier des charges.
 // ⚠️ Adapte cette liste si ta nomenclature ASECNA diffère.
 export const NETWORK_SUBITEMS: Record<NetworkCategoryKey, string[]> = {

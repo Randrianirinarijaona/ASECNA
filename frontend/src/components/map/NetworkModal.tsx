@@ -1,13 +1,19 @@
+//NetworkModal.tsx
+// Modal affichant, pour UN aéroport donné, tous ses paramètres réseau
+// regroupés par catégorie (SFA / SMA / SRNA).
+// La gestion des liaisons (création/suppression) a été déplacée vers
+// NetworkItemModal — ce composant ne fait plus qu'ouvrir la vue détaillée.
+
 import { useState } from 'react';
-import { X, Trash2, Plus, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { X, Trash2, Plus } from 'lucide-react';
 import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
-import type { NetworkCategoryKey } from '../../data/networkCategories';
+import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
+import type { AirportsMap } from '../../hooks/useAirportsData';
 
-// Import du nouveau modal
 import NetworkItemModal from './NetworkItemModal';
 
-// @ts-ignore: Allow side-effect CSS import without type declarations
+// @ts-ignore
 import './NetworkModal.css';
 
 interface NetworkItemInput {
@@ -19,15 +25,17 @@ interface NetworkModalProps {
   airportKey: string;
   airport: Airport;
   isAdmin: boolean;
+  allAirports: AirportsMap;
+  links: NetworkLink[];
   onClose: () => void;
   onDeleteAirport: (key: string) => void;
   onAddItem: (category: NetworkCategoryKey, item: NetworkItemInput) => void;
   onDeleteItem: (category: NetworkCategoryKey, title: string) => void;
-  onUpdateItemStatus?: (
-    category: NetworkCategoryKey,
-    title: string,
-    status: 'operational' | 'maintenance'
-  ) => void;
+  onStartLink: (category: NetworkCategoryKey, itemTitle: string) => void;
+  onDeleteLink: (linkId: string) => void;
+  // Nouveau : permet à NetworkItemModal (imbriqué) de faire basculer l'affichage
+  // sur un autre aéroport quand on clique sur un aéroport lié
+  onNavigateToAirport: (key: string) => void;
 }
 
 const CATEGORIES: NetworkCategoryKey[] = ['sfa', 'sma', 'srna'];
@@ -36,19 +44,27 @@ export default function NetworkModal({
   airportKey,
   airport,
   isAdmin,
+  allAirports,
+  links,
   onClose,
   onDeleteAirport,
   onAddItem,
   onDeleteItem,
+  onStartLink,
+  onDeleteLink,
+  onNavigateToAirport,
 }: NetworkModalProps) {
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
-  // ←←← NOUVEL ÉTAT POUR LE MODAL DÉTAILLÉ
+  // Item ouvert dans la vue détaillée (NetworkItemModal). On garde le statut
+  // réel de l'item même s'il n'est plus affiché ici, pour ne pas le perdre
+  // quand on ouvre le modal détaillé.
   const [selectedItem, setSelectedItem] = useState<{
+    category: NetworkCategoryKey;
     title: string;
-    status: 'operational' | 'maintenance';
     description?: string;
+    status: 'operational' | 'maintenance';
   } | null>(null);
 
   const handleAddSubmit = (category: NetworkCategoryKey) => {
@@ -84,9 +100,13 @@ export default function NetworkModal({
           </div>
         </div>
 
-        <div className="network-modal-body">
+        {/* "network-modal-body--scroll" : limite la hauteur du corps du modal et
+            affiche une barre de défilement verticale quand la liste des paramètres
+            dépasse l'espace disponible (voir CSS à ajouter en fin de message) */}
+        <div className="network-modal-body network-modal-body--scroll">
           {CATEGORIES.map((category) => {
             const items = airport.sections[category] || [];
+
             return (
               <div key={category} className="network-modal-category">
                 <div className="network-modal-category-header">
@@ -108,25 +128,27 @@ export default function NetworkModal({
 
                 <div className="network-item-grid">
                   {items.map((item) => (
-                    <div
-                      key={item.title}
-                      className="network-item-card"
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setSelectedItem({
-                        title: item.title,
-                        status: item.status || 'operational',
-                        description: item.description,
-                      })}
-                    >
-                      <div className="network-item-card-top">
-                        <span className={`status-dot status-dot--${item.status || 'operational'}`} />
+                    <div key={item.title} className="network-item-card">
+                      <div
+                        className="network-item-card-top"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() =>
+                          setSelectedItem({
+                            category,
+                            title: item.title,
+                            description: item.description,
+                            status: item.status || 'operational',
+                          })
+                        }
+                      >
                         <span className="network-item-title">{item.title}</span>
+
                         {isAdmin && (
                           <button
                             className="icon-btn icon-btn--danger icon-btn--sm"
                             title="Supprimer"
                             onClick={(e) => {
-                              e.stopPropagation(); // Empêche l'ouverture du modal en cliquant sur supprimer
+                              e.stopPropagation();
                               onDeleteItem(category, item.title);
                             }}
                           >
@@ -134,18 +156,8 @@ export default function NetworkModal({
                           </button>
                         )}
                       </div>
+
                       {item.description && <p className="network-item-desc">{item.description}</p>}
-                      <span className={`status-label status-label--${item.status || 'operational'}`}>
-                        {item.status === 'maintenance' ? (
-                          <>
-                            <AlertTriangle size={12} /> Maintenance
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck size={12} /> Opérationnel
-                          </>
-                        )}
-                      </span>
                     </div>
                   ))}
                 </div>
@@ -170,19 +182,30 @@ export default function NetworkModal({
           })}
         </div>
 
-        {/* ====================== MODAL DÉTAILLÉ ====================== */}
         {selectedItem && (
           <NetworkItemModal
             itemTitle={selectedItem.title}
             itemStatus={selectedItem.status}
             itemDescription={selectedItem.description}
             airportName={airport.name}
+            category={selectedItem.category}
+            airportKey={airportKey}
+            links={links}
+            allAirports={allAirports}
             isAdmin={isAdmin}
             onClose={() => setSelectedItem(null)}
             onUpdateItem={(newTitle, newStatus, newDesc) => {
               console.log('Mise à jour item:', newTitle, newStatus, newDesc);
-              // Tu pourras plus tard mettre à jour le state de l'aéroport ici
               setSelectedItem(null);
+            }}
+            onStartLink={() => {
+              onStartLink(selectedItem.category, selectedItem.title);
+              setSelectedItem(null); // ferme le modal pour libérer le clic sur la carte
+            }}
+            onDeleteLink={onDeleteLink}
+            onNavigateToAirport={(key) => {
+              setSelectedItem(null); // évite de garder un item "fantôme" ouvert sur le nouvel aéroport
+              onNavigateToAirport(key);
             }}
           />
         )}

@@ -1,5 +1,24 @@
+//NetworkItemModal.tsx
+// Modal de détail pour UN item réseau précis (ex: une fréquence radio).
+// Affiche désormais aussi les aéroports liés à cet item (quand le contexte
+// airportKey/links/allAirports est fourni) et permet de créer/supprimer des liaisons.
+
 import { useState } from 'react';
-import { X, Trash2, Plus, ShieldCheck, AlertTriangle, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  Plus,
+  ShieldCheck,
+  AlertTriangle,
+  Edit2,
+  ToggleLeft,
+  ToggleRight,
+  Link2,
+  Unlink,
+} from 'lucide-react';
+import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
+import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
+import type { AirportsMap } from '../../hooks/useAirportsData';
 import './NetworkItemModal.css';
 
 interface NetworkSubParameter {
@@ -22,6 +41,19 @@ interface NetworkItemModalProps {
     newStatus: 'operational' | 'maintenance',
     newDesc?: string
   ) => void;
+
+  // ── Contexte optionnel pour la gestion des liaisons ──────────────────
+  // Fourni uniquement quand ce modal est ouvert depuis un aéroport précis
+  // (via NetworkModal). Quand ce modal est ouvert depuis un clic sur une
+  // flèche de connexion (plusieurs aéroports concernés), ces props restent
+  // undefined et la section "Aéroports liés" ne s'affiche pas.
+  category?: NetworkCategoryKey;
+  airportKey?: string;
+  links?: NetworkLink[];
+  allAirports?: AirportsMap;
+  onStartLink?: () => void;
+  onDeleteLink?: (linkId: string) => void;
+  onNavigateToAirport?: (key: string) => void;
 }
 
 export default function NetworkItemModal({
@@ -32,13 +64,19 @@ export default function NetworkItemModal({
   isAdmin,
   onClose,
   onUpdateItem,
+  category,
+  airportKey,
+  links,
+  allAirports,
+  onStartLink,
+  onDeleteLink,
+  onNavigateToAirport,
 }: NetworkItemModalProps) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(itemTitle);
   const [editStatus, setEditStatus] = useState(itemStatus);
   const [editDesc, setEditDesc] = useState(itemDescription || '');
 
-  // Données fictives des sous-paramètres
   const [subParameters, setSubParameters] = useState<NetworkSubParameter[]>([
     {
       id: '1',
@@ -66,12 +104,9 @@ export default function NetworkItemModal({
   const [newSubValue, setNewSubValue] = useState('');
   const [showAddSub, setShowAddSub] = useState(false);
 
-  // Changer le statut global du paramètre principal
   const toggleGlobalStatus = () => {
     const newStatus = editStatus === 'operational' ? 'maintenance' : 'operational';
     setEditStatus(newStatus);
-    
-    // Si on n'est pas en mode édition, on sauvegarde directement
     if (!editing && onUpdateItem) {
       onUpdateItem(editTitle, newStatus, editDesc);
     }
@@ -109,6 +144,30 @@ export default function NetworkItemModal({
     );
   };
 
+  // ── Calcul des aéroports liés à cet item, pour l'aéroport courant ────
+  // Ne fait rien (tableau vide) si le contexte nécessaire n'est pas fourni.
+  const hasLinkContext = Boolean(category && airportKey && links && allAirports);
+
+  const linkedAirports = hasLinkContext
+    ? links!
+        .filter(
+          (l) =>
+            l.category === category &&
+            l.itemTitle === itemTitle &&
+            (l.fromAirportKey === airportKey || l.toAirportKey === airportKey)
+        )
+        .map((l) => {
+          const otherKey = l.fromAirportKey === airportKey ? l.toAirportKey : l.fromAirportKey;
+          const other = allAirports![otherKey];
+          return {
+            linkId: l.id,
+            key: otherKey,
+            name: other?.name ?? 'Aéroport supprimé',
+            iata: other?.iata ?? '—',
+          };
+        })
+    : [];
+
   return (
     <div className="network-modal-overlay">
       <div className="network-modal network-item-modal">
@@ -116,7 +175,8 @@ export default function NetworkItemModal({
           <div>
             <h2>{itemTitle}</h2>
             <p className="network-modal-subtitle">
-              {airportName} • Paramètre réseau
+              {category ? `${NETWORK_CATEGORY_LABELS[category]} • ` : ''}
+              {airportName}
             </p>
           </div>
           <div className="network-modal-header-actions">
@@ -145,7 +205,6 @@ export default function NetworkItemModal({
         </div>
 
         <div className="network-modal-body">
-          {/* Informations principales */}
           <div className="network-item-detail">
             <div className="network-item-card-top">
               <span className={`status-dot status-dot--${editStatus}`} />
@@ -191,7 +250,60 @@ export default function NetworkItemModal({
             )}
           </div>
 
-          {/* Sous-paramètres */}
+          {/* ── Aéroports liés ──────────────────────────────────────────
+              Affiché seulement si le contexte de liaison a été fourni
+              (ouverture depuis un aéroport précis via NetworkModal) */}
+          {hasLinkContext && (
+            <div className="network-modal-category">
+              <div className="network-modal-category-header">
+                <h3>Aéroports liés</h3>
+                {isAdmin && onStartLink && (
+                  <button
+                    className="icon-btn"
+                    title="Créer une nouvelle liaison"
+                    onClick={onStartLink}
+                  >
+                    <Link2 size={14} />
+                  </button>
+                )}
+              </div>
+
+              {linkedAirports.length === 0 && (
+                <p className="network-empty">Aucune liaison pour ce paramètre</p>
+              )}
+
+              <div className="network-item-grid">
+                {linkedAirports.map((linked) => (
+                  <div
+                    key={linked.linkId}
+                    className="network-item-card"
+                    style={{ cursor: onNavigateToAirport ? 'pointer' : 'default' }}
+                    onClick={() => onNavigateToAirport?.(linked.key)}
+                  >
+                    <div className="network-item-card-top">
+                      <span className="network-item-title">
+                        {linked.iata} — {linked.name}
+                      </span>
+                      {isAdmin && onDeleteLink && (
+                        <button
+                          className="icon-btn icon-btn--danger icon-btn--sm"
+                          title="Supprimer cette liaison"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteLink(linked.linkId);
+                          }}
+                        >
+                          <Unlink size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sous-paramètres : section inchangée */}
           <div className="network-modal-category">
             <div className="network-modal-category-header">
               <h3>Sous-paramètres / Configuration détaillée</h3>

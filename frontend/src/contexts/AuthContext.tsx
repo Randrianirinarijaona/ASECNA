@@ -1,3 +1,4 @@
+//AuthContext.tsx
 import React, { createContext, useCallback, useEffect, useReducer } from 'react';
 import type { AuthState, LoginPayload, RegisterPayload, User } from '../types';
 import {
@@ -23,15 +24,27 @@ const MOCK_USERS: Record<string, User> = {
     lastLogin: new Date().toISOString(),
     avatarInitials: 'AD',
   },
+  // Anciennement role: 'client' -> renommé 'technicien' (mêmes permissions qu'avant)
   'user': {
     id: '2',
     username: 'user',
     email: 'user@asecna.mg',
-    role: 'client',
+    role: 'technicien',
     isActive: true,
     createdAt: '2025-02-10T10:30:00Z',
     lastLogin: new Date().toISOString(),
     avatarInitials: 'US',
+  },
+  // Nouveau rôle 'user' : visualisation stricte uniquement
+  'viewer': {
+    id: '3',
+    username: 'viewer',
+    email: 'viewer@asecna.mg',
+    role: 'user',
+    isActive: true,
+    createdAt: '2025-03-01T09:00:00Z',
+    lastLogin: new Date().toISOString(),
+    avatarInitials: 'VW',
   },
 };
 
@@ -103,13 +116,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Mock login
     const mockUser = MOCK_USERS[payload.username.toLowerCase()];
-    
+
     if (!mockUser || payload.password !== '123456') {
-      throw new Error('Identifiants incorrects. Essayez : admin / 123456 ou user / 123456');
+      throw new Error(
+        'Identifiants incorrects. Essayez : admin / 123456, user / 123456 ou viewer / 123456'
+      );
     }
 
     const token = 'mock-jwt-token-' + Date.now();
-    
+
     const userWithInitials = {
       ...mockUser,
       avatarInitials: getInitials(mockUser.username),
@@ -117,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     saveToken(token);
     saveUser(userWithInitials);
-    
+
     dispatch({ type: 'AUTH_SUCCESS', payload: { user: userWithInitials, token } });
   }, []);
 

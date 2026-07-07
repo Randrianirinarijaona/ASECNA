@@ -1,3 +1,4 @@
+//api.service.ts
 import type {
   AuthResponse,
   LoginPayload,
@@ -106,7 +107,8 @@ export const userService = {
       body: JSON.stringify({ is_active: isActive }),
     }),
 
-  changeRole: (id: string, role: 'admin' | 'client'): Promise<User> =>
+  // Étendu à 'technicien' | 'user' (anciennement 'admin' | 'client')
+  changeRole: (id: string, role: 'admin' | 'technicien' | 'user'): Promise<User> =>
     request<User>(`/users/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ role }),

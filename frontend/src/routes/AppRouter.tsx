@@ -1,3 +1,4 @@
+//AppRouter.tsx
 import { Routes, Route, Outlet } from 'react-router-dom';
 import { PrivateRoute, AdminRoute } from './RouteGuards';
 import { AppLayout } from '../components/layout/AppLayout';

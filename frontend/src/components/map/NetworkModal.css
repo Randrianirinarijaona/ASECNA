@@ -184,3 +184,118 @@
 .network-add-form .form-input {
   flex: 1;
 }
+
+/* ─── Carte item : ajustements pour accueillir le footer + badge ────────── */
+
+.network-item-card {
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.network-item-card--expanded {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
+.network-item-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+/* ─── Badge de liaisons (compteur cliquable) ─────────────────────────────── */
+
+.link-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 999px;
+  padding: 2px 8px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.link-badge:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.link-badge--empty {
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: default;
+}
+
+.link-badge-chevron {
+  transition: transform 0.15s ease;
+}
+
+.link-badge-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ─── Panneau détaillé des liaisons (déplié dans la carte) ───────────────── */
+
+.network-links-panel {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.network-link-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.network-link-entry:hover {
+  background: #f8fafc;
+}
+
+.network-link-entry-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.network-link-entry-iata {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+}
+
+.network-link-entry-name {
+  font-size: 12px;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.network-links-title { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+.network-link-row { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 0; }
+.network-link-row span { flex: 1; }
+
+.network-modal-body--scroll {
+  max-height: 60vh; /* ajuste selon la hauteur réelle de ton modal */
+  overflow-y: auto;
+}

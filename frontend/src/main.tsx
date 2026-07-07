@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { ToastProvider } from './contexts/ToastContext.tsx';
 import './styles/globals.css';
+import 'leaflet-polylinedecorator';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
