@@ -1,3 +1,4 @@
+//networkCategories.ts
 import type { Airport } from '../types';
 
 export type NetworkCategoryKey = 'sfa' | 'sma' | 'srna';
@@ -15,7 +16,21 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
   srna: 'SRNA',
 };
 
-// À ajouter dans networkCategories.ts, sous NetworkItem
+// ── Paramètres de liaison (nouveau) ─────────────────────────────────────
+// Une liaison peut désormais porter ses propres paramètres nommés,
+// chacun contenant une ou plusieurs valeurs elles aussi nommées librement
+// par l'admin (ex: paramètre "Réseau IP" → valeurs "@IP : 10.2.0.0", "Netmask : ...")
+
+export interface LinkParameterValue {
+  id: string;
+  text: string; // ex: "@IP : 10.2.0.0"
+}
+
+export interface LinkParameter {
+  id: string;
+  name: string; // ex: "Réseau IP"
+  values: LinkParameterValue[];
+}
 
 export interface NetworkLink {
   id: string;
@@ -23,6 +38,7 @@ export interface NetworkLink {
   itemTitle: string;       // le paramètre concerné (ex: "AMHS/RSFTA")
   fromAirportKey: string;
   toAirportKey: string;
+  parameters?: LinkParameter[]; // nouveau — paramètres propres à cette liaison
 }
 
 // Sous-réseaux "officiels" par catégorie, tels que demandés dans le cahier des charges.

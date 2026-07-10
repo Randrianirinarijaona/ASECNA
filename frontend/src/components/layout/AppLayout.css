@@ -103,10 +103,10 @@ button { font-family: inherit; font-size: inherit; cursor: pointer; }
 }
 
 .brand-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--color-accent);
-  border-radius: 8px;
+  width: 45px;
+  height: 45px;
+  background-image: url(../../image/logo.png);
+  background-size: cover;
   display: grid;
   place-items: center;
   font-size: 16px;

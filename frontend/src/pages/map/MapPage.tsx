@@ -1,4 +1,3 @@
-// MapPage.tsx
 import { useState, useMemo } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 // @ts-ignore
@@ -9,17 +8,17 @@ import MainSidebar from '../../components/map/MainSidebar';
 import type { MapModule } from '../../components/map/MainSidebar';
 
 import NetworkModal from '../../components/map/NetworkModal';
-import NetworkItemModal from '../../components/map/NetworkItemModal';
 import NetworkArrow from '../../components/map/NetworkArrow';
 import AddAirportModal from '../../components/map/AddAirportModal';
 import AirportMarker from '../../components/map/AirportMarker';
-import LinkManagerModal from '../../components/map/LinkManagerModal'; // nouveau
-import NetworkNodeModal from '../../components/map/NetworkNodeModal'; // nouveau
+import LinkManagerModal from '../../components/map/LinkManagerModal';
+import NetworkNodeModal from '../../components/map/NetworkNodeModal';
+import LinkDetailModal from '../../components/map/LinkDetailModal';
 
 import { useAirportsData } from '../../hooks/useAirportsData';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
 
-import { useAuth, useToast } from '../../hooks'; // ajout de useToast
+import { useAuth, useToast } from '../../hooks';
 // @ts-ignore
 import './MapPage.css';
 
@@ -27,36 +26,32 @@ export default function MapPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const isAdmin = user?.role === 'admin';
-  // Le rôle 'user' est strictement limité à la visualisation des sous-réseaux
-  // via la sidebar : accès interdit aux paramètres réseau (NetworkModal / NetworkItemModal)
   const canAccessNetworkSettings = user?.role !== 'user';
 
   const {
     airports,
     links,
     addAirport,
-    addTechnicalPoint, // nouveau
+    addTechnicalPoint,
     deleteAirport,
     addNetworkItem,
     deleteNetworkItem,
     addNetworkLink,
     deleteNetworkLink,
+    addLinkParameter,
+    deleteLinkParameter,
+    addLinkParameterValue,
+    deleteLinkParameterValue,
   } = useAirportsData();
 
   const [activeModule, setActiveModule] = useState<MapModule>(null);
   const [selectedAirportKey, setSelectedAirportKey] = useState<string | null>(null);
-
   const [networkUsage, setNetworkUsage] = useState<{
     category: NetworkCategoryKey;
     subItem: string;
   } | null>(null);
 
-  const [selectedNetworkItem, setSelectedNetworkItem] = useState<{
-    category: NetworkCategoryKey;
-    title: string;
-    airportKeys: string[];
-  } | null>(null);
-
+  const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
   const [showAddAirport, setShowAddAirport] = useState(false);
 
   const [linkingState, setLinkingState] = useState<{
@@ -65,7 +60,6 @@ export default function MapPage() {
     fromAirportKey: string;
   } | null>(null);
 
-  // ── Nouveaux états pour les modals ouverts depuis la sidebar ───────────
   const [linkManager, setLinkManager] = useState<{
     category: NetworkCategoryKey;
     subItem: string;
@@ -80,8 +74,6 @@ export default function MapPage() {
 
   const centerMadagascar: [number, number] = [-18.9, 46.8];
 
-  // Sous-ensemble de `airports` ne contenant que les points techniques,
-  // utilisé par la sidebar (module "Réseau local") et par NetworkNodeModal
   const technicalPoints = useMemo(
     () => Object.fromEntries(Object.entries(airports).filter(([, a]) => a.isTechnicalPoint)),
     [airports]
@@ -103,9 +95,7 @@ export default function MapPage() {
 
     setSelectedAirportKey(key);
     setNetworkUsage(null);
-    setSelectedNetworkItem(null);
   };
-
 
   const handleStartLink = (category: NetworkCategoryKey, itemTitle: string) => {
     if (!selectedAirportKey) return;
@@ -115,7 +105,6 @@ export default function MapPage() {
 
   const handleNetworkSubItemClick = (category: NetworkCategoryKey, subItem: string) => {
     setSelectedAirportKey(null);
-    setSelectedNetworkItem(null);
     setNetworkUsage({ category, subItem });
   };
 
@@ -137,22 +126,30 @@ export default function MapPage() {
           positions: [from.coords, to.coords] as [number, number][],
           category: l.category,
           itemTitle: l.itemTitle,
+          fromName: from.name,
+          toName: to.name,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
   }, [links, networkUsage, airports]);
 
-  const handleConnectionClick = (category: NetworkCategoryKey, itemTitle: string) => {
+  const openLinkDetail = (linkId: string) => {
     if (!canAccessNetworkSettings) {
       showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
       return;
     }
-    const relevant = links.filter((l) => l.category === category && l.itemTitle === itemTitle);
-    const airportKeys = Array.from(
-      new Set(relevant.flatMap((l) => [l.fromAirportKey, l.toAirportKey]))
-    );
-    setSelectedNetworkItem({ category, title: itemTitle, airportKeys });
+    setSelectedLinkId(linkId);
   };
+
+  const selectedLink = useMemo(() => {
+    if (!selectedLinkId) return null;
+    const link = links.find((l) => l.id === selectedLinkId);
+    if (!link) return null;
+    const from = airports[link.fromAirportKey];
+    const to = airports[link.toAirportKey];
+    if (!from || !to) return null;
+    return { link, from, to };
+  }, [selectedLinkId, links, airports]);
 
   return (
     <div className="map-page">
@@ -165,7 +162,7 @@ export default function MapPage() {
             setActiveModule(module);
             setSelectedAirportKey(null);
             setNetworkUsage(null);
-            setSelectedNetworkItem(null);
+            setSelectedLinkId(null);
             setLinkManager(null);
             setNodeManager(null);
           }}
@@ -184,50 +181,30 @@ export default function MapPage() {
 
         <div className="map-wrapper">
           {linkingState && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 12,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 1000,
-                background: '#1e293b',
-                color: '#fff',
-                padding: '8px 14px',
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                fontSize: 13,
-              }}
-            >
+            <div className="linking-banner">
               <span>
-                Cliquez sur l'aéroport à lier pour « {linkingState.itemTitle} »
+                Cliquez sur l'aéroport à lier pour « <strong>{linkingState.itemTitle}</strong> »
               </span>
-              <button
-                onClick={() => setLinkingState(null)}
-                style={{
-                  background: 'transparent',
-                  color: '#fff',
-                  border: '1px solid #fff',
-                  borderRadius: 4,
-                  padding: '2px 8px',
-                  cursor: 'pointer',
-                }}
-              >
+              <button className="linking-banner-cancel" onClick={() => setLinkingState(null)}>
                 Annuler
               </button>
             </div>
           )}
 
-          <MapContainer center={centerMadagascar} zoom={7} style={{ height: '100%', width: '100%' }}>
+          <MapContainer
+            {...({
+              center: centerMadagascar,
+              zoom: 7,
+              style: { height: '100%', width: '100%' },
+            } as any)}
+          >
             <TileLayer
-              attribution="&copy; OpenStreetMap"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              {...({
+                attribution: '&copy; OpenStreetMap',
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              } as any)}
             />
 
-            {/* Module "aeroport" : tous les points (aéroports + points techniques).
-                Module "reseauLocal" : uniquement les points techniques. */}
             {(activeModule === 'aeroport' || activeModule === 'reseauLocal') &&
               Object.entries(airports)
                 .filter(([, a]) => (activeModule === 'reseauLocal' ? a.isTechnicalPoint : true))
@@ -245,9 +222,11 @@ export default function MapPage() {
                 <NetworkArrow
                   key={conn.id}
                   positions={conn.positions}
-                  color="#2563eb"
+                  color="var(--color-primary)"
                   weight={5}
-                  onClick={() => handleConnectionClick(conn.category, conn.itemTitle)}
+                  fromName={conn.fromName}
+                  toName={conn.toName}
+                  onClick={() => openLinkDetail(conn.id)}
                 />
               ))}
           </MapContainer>
@@ -268,22 +247,8 @@ export default function MapPage() {
               onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
               onStartLink={handleStartLink}
               onDeleteLink={deleteNetworkLink}
+              onOpenLinkDetail={openLinkDetail}
               onNavigateToAirport={(key) => setSelectedAirportKey(key)}
-            />
-          )}
-
-          {selectedNetworkItem && (
-            <NetworkItemModal
-              itemTitle={selectedNetworkItem.title}
-              itemStatus="operational"
-              itemDescription={`Réseau ${selectedNetworkItem.category.toUpperCase()} • ${selectedNetworkItem.title}`}
-              airportName={`${selectedNetworkItem.airportKeys.length} aéroport(s) connecté(s)`}
-              isAdmin={isAdmin}
-              onClose={() => setSelectedNetworkItem(null)}
-              onUpdateItem={(newTitle, newStatus, newDesc) => {
-                console.log('Mise à jour réseau:', { newTitle, newStatus, newDesc });
-                setSelectedNetworkItem(null);
-              }}
             />
           )}
         </div>
@@ -293,7 +258,6 @@ export default function MapPage() {
         <AddAirportModal onClose={() => setShowAddAirport(false)} onSubmit={addAirport} />
       )}
 
-      {/* ── Nouveaux modals, ouverts depuis la Sidebar ─────────────────── */}
       {linkManager && (
         <LinkManagerModal
           category={linkManager.category}
@@ -319,6 +283,20 @@ export default function MapPage() {
           }}
           onDelete={(key) => deleteAirport(key)}
           onClose={() => setNodeManager(null)}
+        />
+      )}
+
+      {selectedLink && (
+        <LinkDetailModal
+          link={selectedLink.link}
+          fromAirport={selectedLink.from}
+          toAirport={selectedLink.to}
+          isAdmin={isAdmin}
+          onClose={() => setSelectedLinkId(null)}
+          onAddParameter={addLinkParameter}
+          onDeleteParameter={deleteLinkParameter}
+          onAddValue={addLinkParameterValue}
+          onDeleteValue={deleteLinkParameterValue}
         />
       )}
     </div>

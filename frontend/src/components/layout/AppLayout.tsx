@@ -48,7 +48,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       <nav className="app-nav" role="navigation" aria-label="Main navigation">
         <div className="nav-brand">
           <Link to="/" className="brand-link">
-            <span className="brand-icon">✈</span>
+            <span className="brand-icon"></span>
             <span className="brand-name">ASECNA</span>
           </Link>
           <button

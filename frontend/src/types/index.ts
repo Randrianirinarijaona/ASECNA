@@ -1,3 +1,4 @@
+//type
 // ─── Auth & Users ───────────────────────────────────────────────────────────
 
 export type Role = 'admin' | 'technicien' | 'user';

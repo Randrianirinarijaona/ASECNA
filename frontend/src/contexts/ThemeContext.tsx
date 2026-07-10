@@ -1,5 +1,7 @@
+//ThemeContext.tsx
 import React, { createContext, useEffect, useState } from 'react';
-import type { ThemeMode } from '../types';
+
+type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextValue {
   theme: ThemeMode;

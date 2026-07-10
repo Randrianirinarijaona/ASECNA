@@ -1,7 +1,8 @@
 //NetworkItemModal.tsx
 // Modal de détail pour UN item réseau précis (ex: une fréquence radio).
 // Affiche désormais aussi les aéroports liés à cet item (quand le contexte
-// airportKey/links/allAirports est fourni) et permet de créer/supprimer des liaisons.
+// airportKey/links/allAirports est fourni) et permet de créer/supprimer des liaisons,
+// ainsi que d'ouvrir l'onglet dédié aux paramètres de chaque liaison.
 
 import { useState } from 'react';
 import {
@@ -14,11 +15,13 @@ import {
   ToggleLeft,
   ToggleRight,
   Link2,
-  Unlink,
 } from 'lucide-react';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
+// TypeScript may complain about side-effect CSS imports when no type declaration is present.
+// Suppress the error for this import.
+// @ts-ignore
 import './NetworkItemModal.css';
 
 interface NetworkSubParameter {
@@ -54,6 +57,8 @@ interface NetworkItemModalProps {
   onStartLink?: () => void;
   onDeleteLink?: (linkId: string) => void;
   onNavigateToAirport?: (key: string) => void;
+  // nouveau : ouvre l'onglet dédié aux paramètres d'une liaison précise
+  onOpenLinkDetail?: (linkId: string) => void;
 }
 
 export default function NetworkItemModal({
@@ -71,6 +76,7 @@ export default function NetworkItemModal({
   onStartLink,
   onDeleteLink,
   onNavigateToAirport,
+  onOpenLinkDetail,
 }: NetworkItemModalProps) {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(itemTitle);
@@ -263,7 +269,7 @@ export default function NetworkItemModal({
                     title="Créer une nouvelle liaison"
                     onClick={onStartLink}
                   >
-                    <Link2 size={14} />
+                    <Plus size={14} />
                   </button>
                 )}
               </div>
@@ -272,7 +278,7 @@ export default function NetworkItemModal({
                 <p className="network-empty">Aucune liaison pour ce paramètre</p>
               )}
 
-              <div className="network-item-grid">
+              <div className="network-item-grid-params">
                 {linkedAirports.map((linked) => (
                   <div
                     key={linked.linkId}
@@ -284,6 +290,21 @@ export default function NetworkItemModal({
                       <span className="network-item-title">
                         {linked.iata} — {linked.name}
                       </span>
+
+                      {/* nouveau : ouvre l'onglet dédié aux paramètres de cette liaison */}
+                      {onOpenLinkDetail && (
+                        <button
+                          className="icon-btn icon-btn--sm"
+                          title="Voir les paramètres de cette liaison"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenLinkDetail(linked.linkId);
+                          }}
+                        >
+                          <Link2 size={13} />
+                        </button>
+                      )}
+
                       {isAdmin && onDeleteLink && (
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
@@ -293,7 +314,7 @@ export default function NetworkItemModal({
                             onDeleteLink(linked.linkId);
                           }}
                         >
-                          <Unlink size={13} />
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </div>

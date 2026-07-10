@@ -1,92 +1,179 @@
-/*Login.css*/
+/* ==========================================================================
+   VARIABLES DE THÈME & POLICES SÉMANTIQUES
+   ========================================================================== */
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Palette Mode Clair - Inspiré ASECNA */
+  --color-primary: #1e3a8a;       /* Bleu Royal Aéronautique profond */
+  --color-primary-hover: #172554;
+  --color-accent: #0284c7;        /* Bleu ciel actif */
+  --color-admin: #d97706;         /* Ambre de sécurité */
+  --color-success: #16a34a;
+  
+  --color-bg-base: rgba(248, 250, 252, 0.85);
+  --color-card-bg: rgba(255, 255, 255, 0.75);
+  --color-card-border: rgba(255, 255, 255, 0.6);
+  --color-card-shadow: rgba(15, 23, 42, 0.08);
+  
+  --color-text-main: #0f172a;
+  --color-text-muted: #475569;
+  --color-input-bg: rgba(255, 255, 255, 0.9);
+  --color-input-border: #cbd5e1;
+}
+
+[data-theme="dark"] {
+  /* Palette Mode Sombre */
+  --color-primary: #38bdf8;       /* Bleu ciel lumineux pour contrastes sombres */
+  --color-primary-hover: #7dd3fc;
+  --color-accent: #0ea5e9;
+  --color-admin: #fbbf24;
+  
+  --color-bg-base: rgba(15, 23, 42, 0.7);
+  --color-card-bg: rgba(30, 41, 59, 0.7);
+  --color-card-border: rgba(255, 255, 255, 0.07);
+  --color-card-shadow: rgba(0, 0, 0, 0.5);
+  
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-input-bg: rgba(15, 23, 42, 0.6);
+  --color-input-border: #334155;
+}
+
+/* ==========================================================================
+   LAYOUT STRUCTURE
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 .login-root {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background-image: url(../../image/font.jpg);
+  background-image: url('../../image/font.jpg');
   background-size: cover;
-  padding: 1rem;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 1.5rem;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  transition: background-color 0.4s ease;
 }
 
-.login-bg {
+/* Fond filtrant lissant l'image selon le thème */
+.login-bg-overlay {
   position: absolute;
   inset: 0;
-  pointer-events: none;
+  background-color: var(--color-bg-base);
+  backdrop-filter: blur(4px);
+  z-index: 1;
+  transition: background-color 0.4s ease;
 }
 
-.login-bg-grid {
+/* Bouton Sélecteur de Thème Flottant */
+.theme-toggle-btn {
   position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.login-bg-glow {
-  position: absolute;
-  top: -20%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 10;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-card-bg);
+  color: var(--color-text-main);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.theme-toggle-btn:hover {
+  transform: rotate(15deg) scale(1.05);
+  border-color: var(--color-accent);
+}
+
+/* ==========================================================================
+   CARTE DE CONNEXION (GLASSMORPHISM EFFECT)
+   ========================================================================== */
 .login-card {
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  padding: 2.25rem;
-  width: 100%;
-  max-width: 400px;
   position: relative;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
-  animation: card-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 2;
+  width: 100%;
+  max-width: 440px;
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 40px var(--color-card-shadow), 
+              inset 0 1px 0px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.4s, border-color 0.4s, box-shadow 0.4s;
 }
 
-/* Header */
+/* Header & Logo */
 .login-header {
   text-align: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.login-logo-container {
+  display: inline-block;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  margin-bottom: 1rem;
 }
 
 .login-badge {
-  width: 90px;
-  height: 90px;
-  background-image: url(../../image/logo.png);
-  background-size: cover;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  margin: 0 auto 1rem;
+  width: 84px;
+  height: 84px;
+  background-image: url('../../image/logo.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-radius: 50%;
 }
 
 .login-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--color-text);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-main);
+  margin: 0;
 }
 
 .login-subtitle {
   font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: 6px;
+  padding: 0 10px;
 }
 
-/* Role tabs */
+/* ==========================================================================
+   ONGLETS DES RÔLES (REGISTRATION)
+   ========================================================================== */
+.role-tabs-container {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 1.75rem;
+}
+[data-theme="dark"] .role-tabs-container {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .role-tabs {
   display: flex;
-  gap: 6px;
-  background: var(--color-surface-alt);
-  padding: 4px;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
+  gap: 2px;
 }
 
 .role-tab {
@@ -95,56 +182,64 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px;
-  border-radius: 7px;
+  padding: 9px 4px;
+  border-radius: 9px;
   border: none;
-  background: none;
+  background: transparent;
   color: var(--color-text-muted);
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.role-tab:hover {
+  color: var(--color-text-main);
 }
 
 .role-tab--active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  background: #ffffff;
+  color: #1e3a8a !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+[data-theme="dark"] .role-tab--active {
+  background: #334155;
+  color: #f8fafc !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .role-tab--admin.role-tab--active {
-  color: #f59e0b;
-  background: rgba(245,158,11,0.1);
+  color: #b45309 !important;
+  background: rgba(251, 191, 36, 0.15);
 }
 
-/* Error */
-.login-error {
+/* ==========================================================================
+   FORMULAIRES & CHAMPS DE SAISIE
+   ========================================================================== */
+.login-form {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(239,68,68,0.08);
-  border: 1px solid rgba(239,68,68,0.2);
-  border-radius: 8px;
-  color: #ef4444;
-  font-size: 13px;
-  margin-bottom: 1.25rem;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-/* Fields */
-.login-field { margin-bottom: 1.1rem; }
+.login-field {
+  display: flex;
+  flex-direction: column;
+}
 
 .login-label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
+  font-weight: 600;
+  color: var(--color-text-main);
   margin-bottom: 6px;
 }
 
-.login-label--admin { color: #f59e0b; }
+.login-label--accent { color: var(--color-accent); }
+.login-label--admin { color: var(--color-admin); }
 
 .login-input-wrap {
   position: relative;
@@ -154,124 +249,194 @@
 
 .login-input-icon {
   position: absolute;
-  left: 11px;
+  left: 14px;
   color: var(--color-text-muted);
   pointer-events: none;
+  transition: color 0.2s;
 }
 
 .login-input {
   width: 100%;
-  padding: 10px 12px 10px 36px;
-  background: none;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-text);
+  padding: 12px 14px 12px 42px;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  border-radius: 12px;
+  color: var(--color-text-main);
   font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
 }
 
 .login-input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  background: var(--color-card-bg);
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
 }
 
-.login-input::placeholder { color: var(--color-text-muted); }
+.login-input:focus + .login-input-icon {
+  color: var(--color-accent);
+}
 
-.login-input--padded { padding-right: 38px; }
+.login-input--password {
+  padding-right: 44px;
+}
 
-.login-input--admin {
-  padding: 10px 12px;
-  border-color: rgba(245,158,11,0.3);
+.login-input--special {
+  padding-left: 14px;
+  border-style: dashed;
 }
 
 .login-input--admin:focus {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
+  border-color: var(--color-admin);
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2);
 }
 
+/* Œil de visibilité du mot de passe */
 .login-eye {
   position: absolute;
-  right: 10px;
-  background: none;
+  right: 12px;
+  background: transparent;
   border: none;
   color: var(--color-text-muted);
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
   display: grid;
   place-items: center;
-  transition: color 0.15s;
+  transition: all 0.2s;
 }
-.login-eye:hover { color: var(--color-text); }
+
+.login-eye:hover {
+  color: var(--color-text-main);
+  background: rgba(0, 0, 0, 0.05);
+}
 
 .login-hint {
   font-size: 11.5px;
+  font-weight: 500;
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: 5px;
+  padding-left: 2px;
 }
 
-/* Submit */
+/* ==========================================================================
+   ALERTE ERREUR
+   ========================================================================== */
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  animation: shake 0.4s ease-in-out;
+}
+
+/* ==========================================================================
+   BOUTONS ET INTERACTIONS
+   ========================================================================== */
 .login-submit {
   width: 100%;
-  padding: 11px;
-  background: var(--color-accent);
-  color: #fff;
+  padding: 13px;
+  background: var(--color-primary);
+  color: #ffffff;
   border: none;
-  border-radius: 9px;
-  font-size: 14.5px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   margin-top: 0.5rem;
-  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.login-submit:hover { opacity: 0.9; transform: translateY(-1px); }
-.login-submit:active { transform: translateY(0); }
-.login-submit:disabled { opacity: 0.6; cursor: default; transform: none; }
+.login-submit:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
 
-/* Footer */
+.login-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Footer Toggle account */
 .login-footer {
   text-align: center;
-  margin-top: 1.25rem;
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--color-input-border);
+  padding-top: 1.25rem;
 }
 
 .login-toggle {
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 500;
   color: var(--color-text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px;
-  border-radius: 4px;
-  transition: color 0.15s;
-}
-
-.login-toggle:hover { color: var(--color-text); }
-.login-toggle span { color: var(--color-accent); font-weight: 600; }
-
-@keyframes card-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.role-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 7px 4px; /* padding horizontal réduit pour 3 onglets */
-  border-radius: 7px;
-  border: none;
-  background: none;
-  color: var(--color-text-muted);
-  font-size: 12.5px; /* légèrement réduit pour accommoder 3 libellés */
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.login-toggle:hover {
+  color: var(--color-text-main);
+  background: rgba(0,0,0,0.03);
+}
+[data-theme="dark"] .login-toggle:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.login-toggle span {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   ANIMATIONS & MICRO-INTERACTIONS
+   ========================================================================== */
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }

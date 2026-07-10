@@ -1,9 +1,8 @@
-//login.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Lock, User, ShieldCheck, UserCircle, GraduationCap,
-  ArrowLeft, Eye, EyeOff, AlertCircle,
+  ArrowLeft, Eye, EyeOff, AlertCircle, Sun, Moon, CheckCircle2
 } from 'lucide-react';
 import { useAuth, useToast } from '../../hooks';
 import { validatePassword } from '../../utils/jwt';
@@ -17,29 +16,40 @@ export default function Login() {
   const location = useLocation();
   const from = (location.state as { from?: string })?.from || '/';
 
+  // State Management
   const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  // Rôle par défaut désormais 'user' (visualisation, aucune contrainte à l'inscription)
   const [role, setRole] = useState<Role>('user');
   const [adminKey, setAdminKey] = useState('');
   const [validationCode, setValidationCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Theme Management (Light / Dark)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
 
   const validateForm = (): string | null => {
-    if (!username.trim() || username.length < 3) return 'Username must be at least 3 characters';
+    if (!username.trim() || username.length < 3) return 'Le nom d’utilisateur doit contenir au moins 3 caractères';
     if (isRegistering) {
       const pwErr = validatePassword(password);
       if (pwErr) return pwErr;
-      if (password !== confirmPassword) return 'Passwords do not match';
-      if (role === 'admin' && !adminKey.trim()) return 'Admin key is required';
+      if (password !== confirmPassword) return 'Les mots de passe ne correspondent pas';
+      if (role === 'admin' && !adminKey.trim()) return 'La clé administrateur est requise';
       if (role === 'technicien' && !validationCode.trim()) return 'Un code de validation est requis pour un compte Technicien';
-      // role === 'user' : aucune contrainte supplémentaire
     } else {
-      if (!password) return 'Password is required';
+      if (!password) return 'Le mot de passe est requis';
     }
     return null;
   };
@@ -54,16 +64,16 @@ export default function Login() {
     try {
       if (isRegistering) {
         await register({ username, password, confirmPassword, role, adminKey, validationCode });
-        showToast('Account created! Please log in.', 'success');
+        showToast('Compte créé avec succès ! Veuillez vous connecter.', 'success');
         setIsRegistering(false);
         setPassword(''); setConfirmPassword(''); setAdminKey(''); setValidationCode('');
       } else {
         await login({ username, password });
-        showToast(`Welcome back, ${username}!`, 'success');
+        showToast(`Ravi de vous revoir, ${username} !`, 'success');
         navigate(from, { replace: true });
       }
     } catch (err) {
-      setError((err as Error).message || 'An error occurred. Please try again.');
+      setError((err as Error).message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -71,64 +81,75 @@ export default function Login() {
 
   return (
     <div className="login-root">
-      <div className="login-bg" aria-hidden="true">
-        <div className="login-bg-grid" />
-        <div className="login-bg-glow" />
-      </div>
+      {/* Dynamic Background Overlay */}
+      <div className="login-bg-overlay" aria-hidden="true" />
+      
+      {/* Floating Theme Switcher */}
+      <button 
+        type="button" 
+        className="theme-toggle-btn" 
+        onClick={toggleTheme}
+        aria-label="Changer de thème"
+      >
+        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+      </button>
 
       <div className="login-card">
-        {/* Header */}
+        {/* Header with Brand Logo */}
         <div className="login-header">
-          <div className="login-badge">
+          <div className="login-logo-container">
+            <div className="login-badge" />
           </div>
-          <h1 className="login-title">{isRegistering ? 'Create account' : 'Agence pour la Securité de la Navigation Aerienne'}</h1>
+          <h1 className="login-title">ASECNA</h1>
           <p className="login-subtitle">
-            {isRegistering ? 'Madagascar Terminals access' : 'ASECNA Liaison'}
+            {isRegistering ? 'Création de compte — Terminaux Madagascar' : 'Agence pour la Sécurité de la Navigation Aérienne'}
           </p>
         </div>
 
-        {/* Role tabs (registration only) */}
+        {/* Role Tabs Selection (Registration Only) */}
         {isRegistering && (
-          <div className="role-tabs">
-            <button
-              type="button"
-              className={`role-tab ${role === 'user' ? 'role-tab--active' : ''}`}
-              onClick={() => setRole('user')}
-            >
-              <UserCircle size={16} />
-              User
-            </button>
-            <button
-              type="button"
-              className={`role-tab ${role === 'technicien' ? 'role-tab--active' : ''}`}
-              onClick={() => setRole('technicien')}
-            >
-              <GraduationCap size={16} />
-              Technicien
-            </button>
-            <button
-              type="button"
-              className={`role-tab ${role === 'admin' ? 'role-tab--active role-tab--admin' : ''}`}
-              onClick={() => setRole('admin')}
-            >
-              <ShieldCheck size={16} />
-              Admin
-            </button>
+          <div className="role-tabs-container">
+            <div className="role-tabs">
+              <button
+                type="button"
+                className={`role-tab ${role === 'user' ? 'role-tab--active' : ''}`}
+                onClick={() => setRole('user')}
+              >
+                <UserCircle size={15} />
+                <span>Utilisateur</span>
+              </button>
+              <button
+                type="button"
+                className={`role-tab ${role === 'technicien' ? 'role-tab--active' : ''}`}
+                onClick={() => setRole('technicien')}
+              >
+                <GraduationCap size={15} />
+                <span>Technicien</span>
+              </button>
+              <button
+                type="button"
+                className={`role-tab ${role === 'admin' ? 'role-tab--active role-tab--admin' : ''}`}
+                onClick={() => setRole('admin')}
+              >
+                <ShieldCheck size={15} />
+                <span>Admin</span>
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Error */}
+        {/* Error Alert Box */}
         {error && (
           <div className="login-error" role="alert">
-            <AlertCircle size={15} />
+            <AlertCircle size={16} className="flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate>
-          {/* Username */}
+        <form onSubmit={handleSubmit} noValidate className="login-form">
+          {/* Username Input */}
           <div className="login-field">
-            <label className="login-label">Username</label>
+            <label className="login-label">Nom d'utilisateur</label>
             <div className="login-input-wrap">
               <User className="login-input-icon" size={16} />
               <input
@@ -136,7 +157,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="login-input"
-                placeholder="Enter your username"
+                placeholder="Ex: jean.dupont"
                 required
                 autoComplete="username"
                 autoFocus
@@ -144,16 +165,16 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Password */}
+          {/* Password Input */}
           <div className="login-field">
-            <label className="login-label">Password</label>
+            <label className="login-label">Mot de passe</label>
             <div className="login-input-wrap">
               <Lock className="login-input-icon" size={16} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="login-input login-input--padded"
+                className="login-input login-input--password"
                 placeholder="••••••••"
                 required
                 autoComplete={isRegistering ? 'new-password' : 'current-password'}
@@ -162,20 +183,20 @@ export default function Login() {
                 type="button"
                 className="login-eye"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               >
-                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             {isRegistering && (
-              <p className="login-hint">Min. 8 characters, one uppercase, one number</p>
+              <p className="login-hint">8 caractères min, une majuscule, un chiffre.</p>
             )}
           </div>
 
-          {/* Confirm password */}
+          {/* Confirm Password Input */}
           {isRegistering && (
-            <div className="login-field">
-              <label className="login-label">Confirm password</label>
+            <div className="login-field animate-fade-in">
+              <label className="login-label">Confirmer le mot de passe</label>
               <div className="login-input-wrap">
                 <Lock className="login-input-icon" size={16} />
                 <input
@@ -191,56 +212,57 @@ export default function Login() {
             </div>
           )}
 
-          {/* Code de validation (Technicien uniquement) */}
+          {/* Validation Code (Technicien Only) */}
           {isRegistering && role === 'technicien' && (
-            <div className="login-field">
-              <label className="login-label login-label--admin">
-                <Lock size={11} /> Code de validation
+            <div className="login-field animate-fade-in">
+              <label className="login-label login-label--accent">
+                <CheckCircle2 size={13} /> Code de validation Technicien
               </label>
               <input
                 type="text"
                 value={validationCode}
                 onChange={(e) => setValidationCode(e.target.value)}
-                className="login-input login-input--admin"
-                placeholder="Entrez le code de validation Technicien"
+                className="login-input login-input--special"
+                placeholder="Entrez le code technique requis"
                 required
               />
-              <p className="login-hint">Requis pour créer un compte Technicien</p>
             </div>
           )}
 
-          {/* Admin key */}
+          {/* Admin Security Key Input */}
           {isRegistering && role === 'admin' && (
-            <div className="login-field">
+            <div className="login-field animate-fade-in">
               <label className="login-label login-label--admin">
-                <Lock size={11} /> Admin security key
+                <ShieldCheck size={13} /> Clé de sécurité Admin
               </label>
               <input
                 type="password"
                 value={adminKey}
                 onChange={(e) => setAdminKey(e.target.value)}
-                className="login-input login-input--admin"
-                placeholder="Enter the ASECNA admin key"
+                className="login-input login-input--special login-input--admin"
+                placeholder="Entrez la clé maître administrateur"
                 required
               />
-              <p className="login-hint">Required to create administrator accounts</p>
             </div>
           )}
 
+          {/* Submit Button */}
           <button
             type="submit"
             className="login-submit"
             disabled={isSubmitting}
           >
-            {isSubmitting
-              ? 'Please wait…'
-              : isRegistering
-              ? 'Create account'
-              : 'Sign in'}
+            {isSubmitting ? (
+              <span className="spinner-loader">Connexion en cours...</span>
+            ) : isRegistering ? (
+              'Créer le compte'
+            ) : (
+              'Se connecter au portail'
+            )}
           </button>
         </form>
 
-        {/* Footer toggle */}
+        {/* Footer Link Switcher */}
         <div className="login-footer">
           <button
             type="button"
@@ -251,9 +273,9 @@ export default function Login() {
             }}
           >
             {isRegistering ? (
-              <><ArrowLeft size={13} /> Back to sign in</>
+              <><ArrowLeft size={14} /> Retour à la page de connexion</>
             ) : (
-              <>No account? <span>Create one</span></>
+              <>Nouveau sur le réseau ? <span>Créer un compte</span></>
             )}
           </button>
         </div>

@@ -2,7 +2,8 @@
 // Modal affichant, pour UN aéroport donné, tous ses paramètres réseau
 // regroupés par catégorie (SFA / SMA / SRNA).
 // La gestion des liaisons (création/suppression) a été déplacée vers
-// NetworkItemModal — ce composant ne fait plus qu'ouvrir la vue détaillée.
+// NetworkItemModal — ce composant ne fait plus qu'ouvrir la vue détaillée,
+// et transmet désormais aussi l'ouverture de l'onglet dédié à une liaison.
 
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
@@ -18,7 +19,7 @@ import './NetworkModal.css';
 
 interface NetworkItemInput {
   title: string;
-  status: 'operational' | 'maintenance';
+  status: 'operational' | 'maintenance' | 'planned';
 }
 
 interface NetworkModalProps {
@@ -36,6 +37,8 @@ interface NetworkModalProps {
   // Nouveau : permet à NetworkItemModal (imbriqué) de faire basculer l'affichage
   // sur un autre aéroport quand on clique sur un aéroport lié
   onNavigateToAirport: (key: string) => void;
+  // nouveau : ouvre l'onglet dédié aux paramètres d'une liaison précise
+  onOpenLinkDetail: (linkId: string) => void;
 }
 
 const CATEGORIES: NetworkCategoryKey[] = ['sfa', 'sma', 'srna'];
@@ -53,6 +56,7 @@ export default function NetworkModal({
   onStartLink,
   onDeleteLink,
   onNavigateToAirport,
+  onOpenLinkDetail,
 }: NetworkModalProps) {
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
@@ -64,7 +68,7 @@ export default function NetworkModal({
     category: NetworkCategoryKey;
     title: string;
     description?: string;
-    status: 'operational' | 'maintenance';
+    status: 'operational' | 'maintenance' | 'planned';
   } | null>(null);
 
   const handleAddSubmit = (category: NetworkCategoryKey) => {
@@ -102,7 +106,7 @@ export default function NetworkModal({
 
         {/* "network-modal-body--scroll" : limite la hauteur du corps du modal et
             affiche une barre de défilement verticale quand la liste des paramètres
-            dépasse l'espace disponible (voir CSS à ajouter en fin de message) */}
+            dépasse l'espace disponible */}
         <div className="network-modal-body network-modal-body--scroll">
           {CATEGORIES.map((category) => {
             const items = airport.sections[category] || [];
@@ -185,7 +189,7 @@ export default function NetworkModal({
         {selectedItem && (
           <NetworkItemModal
             itemTitle={selectedItem.title}
-            itemStatus={selectedItem.status}
+            itemStatus={selectedItem.status as 'operational' | 'maintenance'}
             itemDescription={selectedItem.description}
             airportName={airport.name}
             category={selectedItem.category}
@@ -203,6 +207,7 @@ export default function NetworkModal({
               setSelectedItem(null); // ferme le modal pour libérer le clic sur la carte
             }}
             onDeleteLink={onDeleteLink}
+            onOpenLinkDetail={onOpenLinkDetail}
             onNavigateToAirport={(key) => {
               setSelectedItem(null); // évite de garder un item "fantôme" ouvert sur le nouvel aéroport
               onNavigateToAirport(key);

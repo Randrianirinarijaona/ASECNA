@@ -1,3 +1,4 @@
+//useAirportsData.ts
 import { useState, useCallback } from 'react';
 import { AIRPORTS as INITIAL_AIRPORTS } from '../data/airportsData';
 import type { Airport } from '../types';
@@ -127,6 +128,7 @@ export function useAirportsData() {
           itemTitle,
           fromAirportKey,
           toAirportKey,
+          parameters: [], // nouveau — liaison créée sans paramètre, ajoutés ensuite via LinkDetailModal
         };
         return [...prev, newLink];
       });
@@ -149,6 +151,77 @@ export function useAirportsData() {
     [links]
   );
 
+  // ─── Paramètres de liaison (nouveau) ────────────────────────────────────
+
+  /** Ajoute un nouveau paramètre (sans valeur) à une liaison donnée. */
+  const addLinkParameter = useCallback((linkId: string, name: string) => {
+    if (!name.trim()) return;
+    setLinks((prev) =>
+      prev.map((l) =>
+        l.id === linkId
+          ? {
+              ...l,
+              parameters: [
+                ...(l.parameters || []),
+                { id: `param-${Date.now()}`, name: name.trim(), values: [] },
+              ],
+            }
+          : l
+      )
+    );
+  }, []);
+
+  /** Supprime un paramètre (et toutes ses valeurs) d'une liaison donnée. */
+  const deleteLinkParameter = useCallback((linkId: string, paramId: string) => {
+    setLinks((prev) =>
+      prev.map((l) =>
+        l.id === linkId
+          ? { ...l, parameters: (l.parameters || []).filter((p) => p.id !== paramId) }
+          : l
+      )
+    );
+  }, []);
+
+  /** Ajoute une valeur nommée à un paramètre existant d'une liaison. */
+  const addLinkParameterValue = useCallback(
+    (linkId: string, paramId: string, text: string) => {
+      if (!text.trim()) return;
+      setLinks((prev) =>
+        prev.map((l) => {
+          if (l.id !== linkId) return l;
+          return {
+            ...l,
+            parameters: (l.parameters || []).map((p) =>
+              p.id === paramId
+                ? { ...p, values: [...p.values, { id: `val-${Date.now()}`, text: text.trim() }] }
+                : p
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
+
+  /** Supprime une valeur précise d'un paramètre de liaison. */
+  const deleteLinkParameterValue = useCallback(
+    (linkId: string, paramId: string, valueId: string) => {
+      setLinks((prev) =>
+        prev.map((l) => {
+          if (l.id !== linkId) return l;
+          return {
+            ...l,
+            parameters: (l.parameters || []).map((p) =>
+              p.id === paramId
+                ? { ...p, values: p.values.filter((v) => v.id !== valueId) }
+                : p
+            ),
+          };
+        })
+      );
+    },
+    []
+  );
 
   /**
    * Crée un "point technique" : un point sur la carte qui n'est pas un
@@ -174,12 +247,11 @@ export function useAirportsData() {
     [addAirport]
   );
 
-
   return {
     airports,
     links,
     addAirport,
-    addTechnicalPoint, // ← nouveau
+    addTechnicalPoint,
     deleteAirport,
     addNetworkItem,
     deleteNetworkItem,
@@ -187,5 +259,10 @@ export function useAirportsData() {
     addNetworkLink,
     deleteNetworkLink,
     getLinksForAirport,
+    // ── nouveau : gestion des paramètres de liaison ──
+    addLinkParameter,
+    deleteLinkParameter,
+    addLinkParameterValue,
+    deleteLinkParameterValue,
   };
 }
