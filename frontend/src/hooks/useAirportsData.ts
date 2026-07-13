@@ -183,7 +183,7 @@ export function useAirportsData() {
   }, []);
 
   /** Ajoute une valeur nommée à un paramètre existant d'une liaison. */
-  const addLinkParameterValue = useCallback(
+  //const addLinkParameterValue = useCallback(
     (linkId: string, paramId: string, text: string) => {
       if (!text.trim()) return;
       setLinks((prev) =>
@@ -194,6 +194,32 @@ export function useAirportsData() {
             parameters: (l.parameters || []).map((p) =>
               p.id === paramId
                 ? { ...p, values: [...p.values, { id: `val-${Date.now()}`, text: text.trim() }] }
+                : p
+            ),
+          };
+        })
+      );
+    },
+    []
+  //);
+  /** Ajoute une valeur nommée à un paramètre existant d'une liaison. */
+  const addLinkParameterValue = useCallback(
+    (linkId: string, paramId: string, name: string, text: string) => {
+      if (!name.trim() || !text.trim()) return;
+      setLinks((prev) =>
+        prev.map((l) => {
+          if (l.id !== linkId) return l;
+          return {
+            ...l,
+            parameters: (l.parameters || []).map((p) =>
+              p.id === paramId
+                ? {
+                    ...p,
+                    values: [
+                      ...p.values,
+                      { id: `val-${Date.now()}`, name: name.trim(), text: text.trim() },
+                    ],
+                  }
                 : p
             ),
           };

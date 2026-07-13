@@ -23,7 +23,8 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
 
 export interface LinkParameterValue {
   id: string;
-  text: string; // ex: "@IP : 10.2.0.0"
+  name: string;   // ex: "Adresse IP", "Masque réseau", "Gateway"
+  text: string;   // ex: "10.2.0.5", "255.255.255.0"
 }
 
 export interface LinkParameter {

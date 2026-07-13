@@ -2,7 +2,7 @@
 // Onglet dédié à UNE liaison précise entre deux aéroports.
 // Affiche les paramètres propres à cette liaison (ex: "Réseau IP"), chacun
 // pouvant contenir plusieurs valeurs nommées librement par l'admin
-// (ex: "@IP : 10.2.0.0", "Netmask : 195.195.195.0").
+// (ex: "Adresse IP : 10.2.0.0", "Masque réseau : 255.255.255.0").
 
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
@@ -20,7 +20,7 @@ interface LinkDetailModalProps {
   onClose: () => void;
   onAddParameter: (linkId: string, name: string) => void;
   onDeleteParameter: (linkId: string, paramId: string) => void;
-  onAddValue: (linkId: string, paramId: string, text: string) => void;
+  onAddValue: (linkId: string, paramId: string, name: string, text: string) => void;
   onDeleteValue: (linkId: string, paramId: string, valueId: string) => void;
 }
 
@@ -38,9 +38,10 @@ export default function LinkDetailModal({
   const [newParamName, setNewParamName] = useState('');
   const [showAddParam, setShowAddParam] = useState(false);
 
-  // Formulaire d'ajout de valeur ouvert pour au plus un paramètre à la fois,
-  // on garde donc simplement l'id du paramètre concerné + le texte saisi.
+  // Formulaire d'ajout de valeur ouvert pour au plus un paramètre à la fois.
+  // On saisit maintenant le nom ET le texte de la valeur.
   const [addingValueFor, setAddingValueFor] = useState<string | null>(null);
+  const [newValueName, setNewValueName] = useState('');
   const [newValueText, setNewValueText] = useState('');
 
   const parameters = link.parameters || [];
@@ -53,8 +54,9 @@ export default function LinkDetailModal({
   };
 
   const handleAddValue = (paramId: string) => {
-    if (!newValueText.trim()) return;
-    onAddValue(link.id, paramId, newValueText.trim());
+    if (!newValueName.trim() || !newValueText.trim()) return;
+    onAddValue(link.id, paramId, newValueName.trim(), newValueText.trim());
+    setNewValueName('');
     setNewValueText('');
     setAddingValueFor(null);
   };
@@ -121,7 +123,7 @@ export default function LinkDetailModal({
                     <div key={value.id} className="network-item-card sub-parameter-card">
                       <div className="network-item-card-top">
                         <span className="network-item-desc" style={{ margin: 0 }}>
-                          {value.text}
+                          <strong>{value.name}</strong> : {value.text}
                         </span>
                         {isAdmin && (
                           <button
@@ -140,14 +142,21 @@ export default function LinkDetailModal({
                 {isAdmin && (
                   <>
                     {addingValueFor === param.id ? (
-                      <div className="network-add-form">
+                      <div className="network-add-form" style={{ flexDirection: 'column', gap: 6 }}>
                         <input
                           className="form-input"
-                          placeholder="Ex: @IP : 10.2.0.0"
+                          placeholder="Nom de la valeur (ex: Adresse IP)"
+                          value={newValueName}
+                          onChange={(e) => setNewValueName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
+                          autoFocus
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="Valeur (ex: 10.2.0.5)"
                           value={newValueText}
                           onChange={(e) => setNewValueText(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
-                          autoFocus
                         />
                         <button className="btn btn-primary btn-sm" onClick={() => handleAddValue(param.id)}>
                           Ajouter
@@ -159,6 +168,7 @@ export default function LinkDetailModal({
                         style={{ marginTop: 8 }}
                         onClick={() => {
                           setAddingValueFor(param.id);
+                          setNewValueName('');
                           setNewValueText('');
                         }}
                       >
