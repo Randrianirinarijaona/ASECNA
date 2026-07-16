@@ -1,13 +1,21 @@
+/* AirportMarker.css */
+
+/* Le divIcon lui-même ne doit avoir aucun style Leaflet par défaut */
+.airport-marker-icon {
+  background: transparent;
+  border: none;
+}
+
 .airport-marker {
-  width: 28px;
-  height: 28px;
-  background: #6366f1;
-  border: 3px solid white;
+  display: block;
+  width: 22px;
+  height: 22px;
+  background: var(--color-primary, #6366f1);
+  border: 3px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
   cursor: pointer;
-  transition: transform 0.2s;
-  position: relative;
+  transition: transform 0.2s ease;
 }
 
 .airport-marker:hover,
@@ -15,17 +23,18 @@
   transform: scale(1.2);
 }
 
+/* Étiquette de nom (Leaflet Tooltip natif, permanent au survol) */
 .marker-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-card);
-  padding: 8px 12px;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  white-space: nowrap;
-  z-index: 1000;
-  font-size: 0.875rem;
-  pointer-events: none;
+  background: var(--color-card, #fff) !important;
+  color: var(--color-text, #0f172a) !important;
+  border: 1px solid var(--color-border, #e2e8f0) !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.marker-tooltip::before {
+  border-top-color: var(--color-border, #e2e8f0) !important;
 }

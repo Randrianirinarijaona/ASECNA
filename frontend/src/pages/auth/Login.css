@@ -11,14 +11,14 @@
   --color-admin: #d97706;         /* Ambre de sécurité */
   --color-success: #16a34a;
   
-  --color-bg-base: rgba(248, 250, 252, 0.85);
-  --color-card-bg: rgba(255, 255, 255, 0.75);
+  --color-bg-base: rgba(248, 250, 252, 0.2);
+  --color-card-bg: rgba(255, 255, 255, 0.6);
   --color-card-border: rgba(255, 255, 255, 0.6);
   --color-card-shadow: rgba(15, 23, 42, 0.08);
   
   --color-text-main: #0f172a;
   --color-text-muted: #475569;
-  --color-input-bg: rgba(255, 255, 255, 0.9);
+  --color-input-bg: rgba(255, 255, 255, 0.5);
   --color-input-border: #cbd5e1;
 }
 

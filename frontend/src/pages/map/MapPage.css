@@ -70,3 +70,38 @@
   background: var(--color-danger);
   color: #fff;
 }
+
+/* ==========================================================================
+   Adaptation Leaflet pour le Mode Sombre
+   ========================================================================== */
+
+/* Ajustement des contrôles Leaflet (+ / -) */
+[data-theme="dark"] .leaflet-bar a {
+  background-color: var(--color-card);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .leaflet-bar a:hover {
+  background-color: var(--color-bg);
+}
+
+[data-theme="dark"] .leaflet-bar a.leaflet-disabled {
+  background-color: var(--color-card);
+  color: var(--color-text-muted);
+}
+
+/* Ajustement du bloc d'attribution en bas à droite */
+[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
+  background: rgba(30, 41, 55, 0.8); /* Correspond à var(--color-card) avec de l'opacité */
+  color: var(--color-text-muted);
+}
+
+[data-theme="dark"] .leaflet-container .leaflet-control-attribution a {
+  color: var(--color-primary);
+}
+
+/* Optionnel : Si tu veux adoucir le rendu visuel général de la carte sombre */
+[data-theme="dark"] .leaflet-tile-container {
+  filter: brightness(0.9) contrast(1.1);
+}

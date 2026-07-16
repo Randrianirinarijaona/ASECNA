@@ -1,11 +1,5 @@
 //NetworkModal.tsx
-// Modal affichant, pour UN aéroport donné, tous ses paramètres réseau
-// regroupés par catégorie (SFA / SMA / SRNA).
-// La gestion des liaisons (création/suppression) a été déplacée vers
-// NetworkItemModal — ce composant ne fait plus qu'ouvrir la vue détaillée,
-// et transmet désormais aussi l'ouverture de l'onglet dédié à une liaison.
-
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
@@ -32,12 +26,42 @@ interface NetworkModalProps {
   onDeleteAirport: (key: string) => void;
   onAddItem: (category: NetworkCategoryKey, item: NetworkItemInput) => void;
   onDeleteItem: (category: NetworkCategoryKey, title: string) => void;
+  onUpdateItemStatus: (
+    airportKey: string,
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    status: 'operational' | 'maintenance'
+  ) => void;
+  // nouveau
+  onUpdateItemDescription: (
+    airportKey: string,
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    description: string
+  ) => void;
+  onAddSubParameter: (
+    airportKey: string,
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    title: string,
+    value: string
+  ) => void;
+  onDeleteSubParameter: (
+    airportKey: string,
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    subId: string
+  ) => void;
+  onToggleSubParameterStatus: (
+    airportKey: string,
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    subId: string
+  ) => void;
+
   onStartLink: (category: NetworkCategoryKey, itemTitle: string) => void;
   onDeleteLink: (linkId: string) => void;
-  // Nouveau : permet à NetworkItemModal (imbriqué) de faire basculer l'affichage
-  // sur un autre aéroport quand on clique sur un aéroport lié
   onNavigateToAirport: (key: string) => void;
-  // nouveau : ouvre l'onglet dédié aux paramètres d'une liaison précise
   onOpenLinkDetail: (linkId: string) => void;
 }
 
@@ -53,6 +77,11 @@ export default function NetworkModal({
   onDeleteAirport,
   onAddItem,
   onDeleteItem,
+  onUpdateItemStatus,
+  onUpdateItemDescription,
+  onAddSubParameter,
+  onDeleteSubParameter,
+  onToggleSubParameterStatus,
   onStartLink,
   onDeleteLink,
   onNavigateToAirport,
@@ -61,15 +90,20 @@ export default function NetworkModal({
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
-  // Item ouvert dans la vue détaillée (NetworkItemModal). On garde le statut
-  // réel de l'item même s'il n'est plus affiché ici, pour ne pas le perdre
-  // quand on ouvre le modal détaillé.
-  const [selectedItem, setSelectedItem] = useState<{
+  // On ne garde que la clé de l'item ouvert ; les données affichées sont
+  // recalculées à chaque rendu depuis `airport`, donc toujours à jour
+  // (statut, description, sous-paramètres...).
+  const [selectedItemKey, setSelectedItemKey] = useState<{
     category: NetworkCategoryKey;
     title: string;
-    description?: string;
-    status: 'operational' | 'maintenance' | 'planned';
   } | null>(null);
+
+  const selectedItem = useMemo(() => {
+    if (!selectedItemKey) return null;
+    const items = airport.sections[selectedItemKey.category] || [];
+    const item = items.find((i) => i.title === selectedItemKey.title);
+    return item ? { ...item, category: selectedItemKey.category } : null;
+  }, [selectedItemKey, airport]);
 
   const handleAddSubmit = (category: NetworkCategoryKey) => {
     if (!newTitle.trim()) return;
@@ -104,9 +138,6 @@ export default function NetworkModal({
           </div>
         </div>
 
-        {/* "network-modal-body--scroll" : limite la hauteur du corps du modal et
-            affiche une barre de défilement verticale quand la liste des paramètres
-            dépasse l'espace disponible */}
         <div className="network-modal-body network-modal-body--scroll">
           {CATEGORIES.map((category) => {
             const items = airport.sections[category] || [];
@@ -136,14 +167,7 @@ export default function NetworkModal({
                       <div
                         className="network-item-card-top"
                         style={{ cursor: 'pointer' }}
-                        onClick={() =>
-                          setSelectedItem({
-                            category,
-                            title: item.title,
-                            description: item.description,
-                            status: item.status || 'operational',
-                          })
-                        }
+                        onClick={() => setSelectedItemKey({ category, title: item.title })}
                       >
                         <span className="network-item-title">{item.title}</span>
 
@@ -189,27 +213,47 @@ export default function NetworkModal({
         {selectedItem && (
           <NetworkItemModal
             itemTitle={selectedItem.title}
-            itemStatus={selectedItem.status as 'operational' | 'maintenance'}
+            itemStatus={(selectedItem.status as 'operational' | 'maintenance') || 'operational'}
             itemDescription={selectedItem.description}
+            subParameters={selectedItem.subParameters || []}
             airportName={airport.name}
             category={selectedItem.category}
             airportKey={airportKey}
             links={links}
             allAirports={allAirports}
             isAdmin={isAdmin}
-            onClose={() => setSelectedItem(null)}
+            onClose={() => setSelectedItemKey(null)}
             onUpdateItem={(newTitle, newStatus, newDesc) => {
-              console.log('Mise à jour item:', newTitle, newStatus, newDesc);
-              setSelectedItem(null);
+              onUpdateItemStatus(airportKey, selectedItem.category, selectedItem.title, newStatus);
+              if ((newDesc || '') !== (selectedItem.description || '')) {
+                onUpdateItemDescription(airportKey, selectedItem.category, selectedItem.title, newDesc || '');
+              }
+              // Le renommage du titre n'est volontairement pas persisté : le
+              // titre sert de clé de correspondance pour les liaisons
+              // existantes (NetworkLink.itemTitle). Le permettre nécessite
+              // de propager le renommage à toutes les liaisons concernées —
+              // à valider séparément si tu en as besoin.
+              if (newTitle !== selectedItem.title) {
+                console.info('Renommage non persisté (casserait les liaisons existantes) :', newTitle);
+              }
             }}
+            onAddSubParameter={(title, value) =>
+              onAddSubParameter(airportKey, selectedItem.category, selectedItem.title, title, value)
+            }
+            onDeleteSubParameter={(subId) =>
+              onDeleteSubParameter(airportKey, selectedItem.category, selectedItem.title, subId)
+            }
+            onToggleSubParameterStatus={(subId) =>
+              onToggleSubParameterStatus(airportKey, selectedItem.category, selectedItem.title, subId)
+            }
             onStartLink={() => {
               onStartLink(selectedItem.category, selectedItem.title);
-              setSelectedItem(null); // ferme le modal pour libérer le clic sur la carte
+              setSelectedItemKey(null);
             }}
             onDeleteLink={onDeleteLink}
             onOpenLinkDetail={onOpenLinkDetail}
             onNavigateToAirport={(key) => {
-              setSelectedItem(null); // évite de garder un item "fantôme" ouvert sur le nouvel aéroport
+              setSelectedItemKey(null);
               onNavigateToAirport(key);
             }}
           />

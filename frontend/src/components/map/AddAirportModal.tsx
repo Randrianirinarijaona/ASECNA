@@ -4,11 +4,12 @@ import type { Airport } from '../../types';
 import './AddAirportModal.css';
 
 interface AddAirportModalProps {
+  existingKeys: string[];
   onClose: () => void;
   onSubmit: (key: string, airport: Airport) => void;
 }
 
-export default function AddAirportModal({ onClose, onSubmit }: AddAirportModalProps) {
+export default function AddAirportModal({ existingKeys, onClose, onSubmit }: AddAirportModalProps) {
   const [name, setName] = useState('');
   const [iata, setIata] = useState('');
   const [lat, setLat] = useState('');
@@ -28,6 +29,12 @@ export default function AddAirportModal({ onClose, onSubmit }: AddAirportModalPr
     }
 
     const key = iata.trim().toUpperCase();
+
+    if (existingKeys.includes(key)) {
+      setError(`Le code IATA "${key}" est déjà utilisé par un autre aéroport`);
+      return;
+    }
+
     onSubmit(key, {
       name: name.trim(),
       iata: key,

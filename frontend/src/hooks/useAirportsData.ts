@@ -20,7 +20,6 @@ export function useAirportsData() {
       delete next[key];
       return next;
     });
-    // On nettoie aussi les liaisons qui pointaient vers cet aéroport supprimé
     setLinks((prev) =>
       prev.filter((l) => l.fromAirportKey !== key && l.toAirportKey !== key)
     );
@@ -60,7 +59,6 @@ export function useAirportsData() {
           [airportKey]: { ...airport, sections: { ...airport.sections, [category]: filtered } },
         };
       });
-      // Un item supprimé n'a plus de raison d'avoir des liaisons actives
       setLinks((prev) =>
         prev.filter(
           (l) =>
@@ -96,13 +94,30 @@ export function useAirportsData() {
     []
   );
 
+  // nouveau : persiste la description d'un item réseau
+  const updateNetworkItemDescription = useCallback(
+    (
+      airportKey: string,
+      category: NetworkCategoryKey,
+      itemTitle: string,
+      description: string
+    ) => {
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        const items = airport.sections[category] || [];
+        const updated = items.map((i) => (i.title === itemTitle ? { ...i, description } : i));
+        return {
+          ...prev,
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+        };
+      });
+    },
+    []
+  );
+
   // ─── Liaisons (flèches) ────────────────────────────────────────────────
 
-  /**
-   * Crée une liaison entre deux aéroports pour un paramètre réseau donné.
-   * Ignore silencieusement si : auto-liaison, ou liaison déjà existante
-   * (dans un sens ou dans l'autre — une liaison A→B équivaut à B→A).
-   */
   const addNetworkLink = useCallback(
     (
       category: NetworkCategoryKey,
@@ -128,7 +143,7 @@ export function useAirportsData() {
           itemTitle,
           fromAirportKey,
           toAirportKey,
-          parameters: [], // nouveau — liaison créée sans paramètre, ajoutés ensuite via LinkDetailModal
+          parameters: [],
         };
         return [...prev, newLink];
       });
@@ -140,7 +155,6 @@ export function useAirportsData() {
     setLinks((prev) => prev.filter((l) => l.id !== linkId));
   }, []);
 
-  /** Utilitaire : toutes les liaisons touchant un aéroport (option: filtrées par catégorie) */
   const getLinksForAirport = useCallback(
     (airportKey: string, category?: NetworkCategoryKey) =>
       links.filter(
@@ -151,9 +165,8 @@ export function useAirportsData() {
     [links]
   );
 
-  // ─── Paramètres de liaison (nouveau) ────────────────────────────────────
+  // ─── Paramètres de liaison ───────────────────────────────────────────────
 
-  /** Ajoute un nouveau paramètre (sans valeur) à une liaison donnée. */
   const addLinkParameter = useCallback((linkId: string, name: string) => {
     if (!name.trim()) return;
     setLinks((prev) =>
@@ -171,7 +184,6 @@ export function useAirportsData() {
     );
   }, []);
 
-  /** Supprime un paramètre (et toutes ses valeurs) d'une liaison donnée. */
   const deleteLinkParameter = useCallback((linkId: string, paramId: string) => {
     setLinks((prev) =>
       prev.map((l) =>
@@ -182,27 +194,6 @@ export function useAirportsData() {
     );
   }, []);
 
-  /** Ajoute une valeur nommée à un paramètre existant d'une liaison. */
-  //const addLinkParameterValue = useCallback(
-    (linkId: string, paramId: string, text: string) => {
-      if (!text.trim()) return;
-      setLinks((prev) =>
-        prev.map((l) => {
-          if (l.id !== linkId) return l;
-          return {
-            ...l,
-            parameters: (l.parameters || []).map((p) =>
-              p.id === paramId
-                ? { ...p, values: [...p.values, { id: `val-${Date.now()}`, text: text.trim() }] }
-                : p
-            ),
-          };
-        })
-      );
-    },
-    []
-  //);
-  /** Ajoute une valeur nommée à un paramètre existant d'une liaison. */
   const addLinkParameterValue = useCallback(
     (linkId: string, paramId: string, name: string, text: string) => {
       if (!name.trim() || !text.trim()) return;
@@ -229,7 +220,6 @@ export function useAirportsData() {
     []
   );
 
-  /** Supprime une valeur précise d'un paramètre de liaison. */
   const deleteLinkParameterValue = useCallback(
     (linkId: string, paramId: string, valueId: string) => {
       setLinks((prev) =>
@@ -249,14 +239,96 @@ export function useAirportsData() {
     []
   );
 
-  /**
-   * Crée un "point technique" : un point sur la carte qui n'est pas un
-   * véritable aéroport (relais VHF/HF, antenne...), mais réutilise la même
-   * structure Airport (isTechnicalPoint: true, pas de code IATA).
-   * On lui attribue directement l'item réseau correspondant au sous-réseau
-   * choisi (category + subItem), pour qu'il apparaisse immédiatement dans
-   * les liaisons/filtres existants sans logique supplémentaire.
-   */
+  // ─── Sous-paramètres d'un item réseau (nouveau) ─────────────────────────
+  // Réutilise exactement le même pattern CRUD que les paramètres de liaison,
+  // mais rattaché à un AirportSectionItem (identifié par airportKey +
+  // category + itemTitle) plutôt qu'à un NetworkLink.
+
+  const addItemSubParameter = useCallback(
+    (
+      airportKey: string,
+      category: NetworkCategoryKey,
+      itemTitle: string,
+      title: string,
+      value: string
+    ) => {
+      if (!title.trim() || !value.trim()) return;
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        const items = airport.sections[category] || [];
+        const updated = items.map((i) =>
+          i.title === itemTitle
+            ? {
+                ...i,
+                subParameters: [
+                  ...(i.subParameters || []),
+                  {
+                    id: `sub-${Date.now()}`,
+                    title: title.trim(),
+                    value: value.trim(),
+                    status: 'operational' as const,
+                  },
+                ],
+              }
+            : i
+        );
+        return {
+          ...prev,
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+        };
+      });
+    },
+    []
+  );
+
+  const deleteItemSubParameter = useCallback(
+    (airportKey: string, category: NetworkCategoryKey, itemTitle: string, subId: string) => {
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        const items = airport.sections[category] || [];
+        const updated = items.map((i) =>
+          i.title === itemTitle
+            ? { ...i, subParameters: (i.subParameters || []).filter((s) => s.id !== subId) }
+            : i
+        );
+        return {
+          ...prev,
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+        };
+      });
+    },
+    []
+  );
+
+  const toggleItemSubParameterStatus = useCallback(
+    (airportKey: string, category: NetworkCategoryKey, itemTitle: string, subId: string) => {
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        const items = airport.sections[category] || [];
+        const updated = items.map((i) =>
+          i.title === itemTitle
+            ? {
+                ...i,
+                subParameters: (i.subParameters || []).map((s) =>
+                  s.id === subId
+                    ? { ...s, status: s.status === 'operational' ? 'maintenance' : 'operational' }
+                    : s
+                ),
+              }
+            : i
+        );
+        return {
+          ...prev,
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+        };
+      });
+    },
+    []
+  );
+
   const addTechnicalPoint = useCallback(
     (category: NetworkCategoryKey, subItem: string, name: string, coords: [number, number]) => {
       const key = `tech-${category}-${subItem}-${Date.now()}`;
@@ -282,13 +354,17 @@ export function useAirportsData() {
     addNetworkItem,
     deleteNetworkItem,
     updateNetworkItemStatus,
+    updateNetworkItemDescription, // nouveau
     addNetworkLink,
     deleteNetworkLink,
     getLinksForAirport,
-    // ── nouveau : gestion des paramètres de liaison ──
     addLinkParameter,
     deleteLinkParameter,
     addLinkParameterValue,
     deleteLinkParameterValue,
+    // nouveau : sous-paramètres persistés par item réseau
+    addItemSubParameter,
+    deleteItemSubParameter,
+    toggleItemSubParameterStatus,
   };
 }

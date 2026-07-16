@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
@@ -18,30 +18,37 @@ import LinkDetailModal from '../../components/map/LinkDetailModal';
 import { useAirportsData } from '../../hooks/useAirportsData';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
 
-import { useAuth, useToast } from '../../hooks';
+import { useAuth, useToast, useTheme } from '../../hooks';
 // @ts-ignore
 import './MapPage.css';
 
 export default function MapPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { resolvedTheme } = useTheme();
+
   const isAdmin = user?.role === 'admin';
   const canAccessNetworkSettings = user?.role !== 'user';
 
   const {
     airports,
-    links,
-    addAirport,
-    addTechnicalPoint,
-    deleteAirport,
-    addNetworkItem,
-    deleteNetworkItem,
-    addNetworkLink,
-    deleteNetworkLink,
-    addLinkParameter,
-    deleteLinkParameter,
-    addLinkParameterValue,
-    deleteLinkParameterValue,
+  links,
+  addAirport,
+  addTechnicalPoint,
+  deleteAirport,
+  addNetworkItem,
+  deleteNetworkItem,
+  updateNetworkItemStatus,
+  updateNetworkItemDescription, // nouveau
+  addNetworkLink,
+  deleteNetworkLink,
+  addLinkParameter,
+  deleteLinkParameter,
+  addLinkParameterValue,
+  deleteLinkParameterValue,
+  addItemSubParameter,          // nouveau
+  deleteItemSubParameter,       // nouveau
+  toggleItemSubParameterStatus, // nouveau
   } = useAirportsData();
 
   const [activeModule, setActiveModule] = useState<MapModule>(null);
@@ -133,13 +140,18 @@ export default function MapPage() {
       .filter((c): c is NonNullable<typeof c> => c !== null);
   }, [links, networkUsage, airports]);
 
-  const openLinkDetail = (linkId: string) => {
-    if (!canAccessNetworkSettings) {
-      showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
-      return;
-    }
-    setSelectedLinkId(linkId);
-  };
+  // Stabilisée avec useCallback : évite que NetworkArrow recrée sa polyline
+  // Leaflet à chaque re-render de MapPage.
+  const openLinkDetail = useCallback(
+    (linkId: string) => {
+      if (!canAccessNetworkSettings) {
+        showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
+        return;
+      }
+      setSelectedLinkId(linkId);
+    },
+    [canAccessNetworkSettings, showToast]
+  );
 
   const selectedLink = useMemo(() => {
     if (!selectedLinkId) return null;
@@ -200,8 +212,14 @@ export default function MapPage() {
           >
             <TileLayer
               {...({
-                attribution: '&copy; OpenStreetMap',
-                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                attribution:
+                  resolvedTheme === 'dark'
+                    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                url:
+                  resolvedTheme === 'dark'
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
               } as any)}
             />
 
@@ -233,29 +251,38 @@ export default function MapPage() {
 
           {selectedAirportKey && airports[selectedAirportKey] && (
             <NetworkModal
-              airportKey={selectedAirportKey}
-              airport={airports[selectedAirportKey]}
-              isAdmin={isAdmin}
-              allAirports={airports}
-              links={links}
-              onClose={() => setSelectedAirportKey(null)}
-              onDeleteAirport={(key) => {
-                deleteAirport(key);
-                setSelectedAirportKey(null);
-              }}
-              onAddItem={(category, item) => addNetworkItem(selectedAirportKey, category, item)}
-              onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
-              onStartLink={handleStartLink}
-              onDeleteLink={deleteNetworkLink}
-              onOpenLinkDetail={openLinkDetail}
-              onNavigateToAirport={(key) => setSelectedAirportKey(key)}
-            />
+  airportKey={selectedAirportKey}
+  airport={airports[selectedAirportKey]}
+  isAdmin={isAdmin}
+  allAirports={airports}
+  links={links}
+  onClose={() => setSelectedAirportKey(null)}
+  onDeleteAirport={(key) => {
+    deleteAirport(key);
+    setSelectedAirportKey(null);
+  }}
+  onAddItem={(category, item) => addNetworkItem(selectedAirportKey, category, item as any)}
+  onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
+  onUpdateItemStatus={updateNetworkItemStatus}
+  onUpdateItemDescription={updateNetworkItemDescription}
+  onAddSubParameter={addItemSubParameter}
+  onDeleteSubParameter={deleteItemSubParameter}
+  onToggleSubParameterStatus={toggleItemSubParameterStatus}
+  onStartLink={handleStartLink}
+  onDeleteLink={deleteNetworkLink}
+  onOpenLinkDetail={openLinkDetail}
+  onNavigateToAirport={(key) => setSelectedAirportKey(key)}
+/>
           )}
         </div>
       </div>
 
       {showAddAirport && (
-        <AddAirportModal onClose={() => setShowAddAirport(false)} onSubmit={addAirport} />
+        <AddAirportModal
+          existingKeys={Object.keys(airports)}
+          onClose={() => setShowAddAirport(false)}
+          onSubmit={addAirport}
+        />
       )}
 
       {linkManager && (

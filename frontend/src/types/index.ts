@@ -1,4 +1,4 @@
-//type
+//type/index.ts
 // ─── Auth & Users ───────────────────────────────────────────────────────────
 
 export type Role = 'admin' | 'technicien' | 'user';
@@ -57,32 +57,41 @@ export interface Flight {
 }
 
 export interface AirportSectionItem {
-    title: string;
-    description?: string;
-    details?: string[];
-    status?: 'operational' | 'maintenance' | 'planned';
-    // Tu peux ajouter d'autres champs : date, responsable, etc.
+  title: string;
+  description?: string;
+  details?: string[];
+  status?: 'operational' | 'maintenance' | 'planned';
+  // Tu peux ajouter d'autres champs : date, responsable, etc.
 }
 
 export interface Airport {
-    name: string;
-    iata: string;
-    coords: [number, number];
-    sections: {
-        [key: string]: AirportSectionItem[];   // Changement ici
-    };
-
+  name: string;
+  iata: string;
+  coords: [number, number];
+  // Distingue un vrai aéroport d'un simple point technique
+  // (relais VHF/HF, antenne SRNA...) créé depuis "Réseau local" ou
+  // depuis les boutons "Ajouter un réseau" de la sidebar.
+  isTechnicalPoint?: boolean;
+  sections: {
+    [key: string]: AirportSectionItem[];
+  };
 }
 
-export interface Airport {
-    name: string;
-    iata: string;
-    coords: [number, number];
-    // Nouveau : distingue un vrai aéroport d'un simple point technique
-    // (relais VHF/HF, antenne SRNA...) créé depuis "Réseau local" ou
-    // depuis les boutons "Ajouter un réseau" de la sidebar.
-    isTechnicalPoint?: boolean;
-    sections: {
-        [key: string]: AirportSectionItem[];
-    };
+// À ajouter dans type/index.ts, après AirportSectionItem
+
+export interface NetworkSubParameter {
+  id: string;
+  title: string;
+  value: string;
+  status: 'operational' | 'maintenance';
+  description?: string;
+}
+
+export interface AirportSectionItem {
+  title: string;
+  description?: string;
+  details?: string[];
+  status?: 'operational' | 'maintenance' | 'planned';
+  // nouveau : sous-paramètres persistés (ex: fréquences, protocoles...)
+  subParameters?: NetworkSubParameter[];
 }

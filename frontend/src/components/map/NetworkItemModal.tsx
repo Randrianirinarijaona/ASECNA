@@ -1,9 +1,4 @@
 //NetworkItemModal.tsx
-// Modal de détail pour UN item réseau précis (ex: une fréquence radio).
-// Affiche désormais aussi les aéroports liés à cet item (quand le contexte
-// airportKey/links/allAirports est fourni) et permet de créer/supprimer des liaisons,
-// ainsi que d'ouvrir l'onglet dédié aux paramètres de chaque liaison.
-
 import { useState } from 'react';
 import {
   X,
@@ -19,23 +14,16 @@ import {
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
-// TypeScript may complain about side-effect CSS imports when no type declaration is present.
-// Suppress the error for this import.
+import type { NetworkSubParameter } from '../../types';
 // @ts-ignore
 import './NetworkItemModal.css';
-
-interface NetworkSubParameter {
-  id: string;
-  title: string;
-  value: string;
-  status: 'operational' | 'maintenance';
-  description?: string;
-}
 
 interface NetworkItemModalProps {
   itemTitle: string;
   itemStatus: 'operational' | 'maintenance';
   itemDescription?: string;
+  // nouveau : données réelles, persistées via useAirportsData (plus de state local factice)
+  subParameters: NetworkSubParameter[];
   airportName: string;
   isAdmin: boolean;
   onClose: () => void;
@@ -44,12 +32,10 @@ interface NetworkItemModalProps {
     newStatus: 'operational' | 'maintenance',
     newDesc?: string
   ) => void;
+  onAddSubParameter?: (title: string, value: string) => void;
+  onDeleteSubParameter?: (subId: string) => void;
+  onToggleSubParameterStatus?: (subId: string) => void;
 
-  // ── Contexte optionnel pour la gestion des liaisons ──────────────────
-  // Fourni uniquement quand ce modal est ouvert depuis un aéroport précis
-  // (via NetworkModal). Quand ce modal est ouvert depuis un clic sur une
-  // flèche de connexion (plusieurs aéroports concernés), ces props restent
-  // undefined et la section "Aéroports liés" ne s'affiche pas.
   category?: NetworkCategoryKey;
   airportKey?: string;
   links?: NetworkLink[];
@@ -57,7 +43,6 @@ interface NetworkItemModalProps {
   onStartLink?: () => void;
   onDeleteLink?: (linkId: string) => void;
   onNavigateToAirport?: (key: string) => void;
-  // nouveau : ouvre l'onglet dédié aux paramètres d'une liaison précise
   onOpenLinkDetail?: (linkId: string) => void;
 }
 
@@ -65,10 +50,14 @@ export default function NetworkItemModal({
   itemTitle,
   itemStatus,
   itemDescription,
+  subParameters,
   airportName,
   isAdmin,
   onClose,
   onUpdateItem,
+  onAddSubParameter,
+  onDeleteSubParameter,
+  onToggleSubParameterStatus,
   category,
   airportKey,
   links,
@@ -82,29 +71,6 @@ export default function NetworkItemModal({
   const [editTitle, setEditTitle] = useState(itemTitle);
   const [editStatus, setEditStatus] = useState(itemStatus);
   const [editDesc, setEditDesc] = useState(itemDescription || '');
-
-  const [subParameters, setSubParameters] = useState<NetworkSubParameter[]>([
-    {
-      id: '1',
-      title: 'Fréquence principale',
-      value: '123.450 MHz',
-      status: 'operational',
-      description: 'Voie principale de communication',
-    },
-    {
-      id: '2',
-      title: 'Fréquence Backup',
-      value: '121.950 MHz',
-      status: 'maintenance',
-      description: 'Fréquence de secours',
-    },
-    {
-      id: '3',
-      title: 'Protocole utilisé',
-      value: 'AIDC v2.1',
-      status: 'operational',
-    },
-  ]);
 
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubValue, setNewSubValue] = useState('');
@@ -125,33 +91,12 @@ export default function NetworkItemModal({
 
   const addSubParameter = () => {
     if (!newSubTitle.trim() || !newSubValue.trim()) return;
-    setSubParameters(prev => [...prev, {
-      id: Date.now().toString(),
-      title: newSubTitle.trim(),
-      value: newSubValue.trim(),
-      status: 'operational',
-    }]);
+    onAddSubParameter?.(newSubTitle.trim(), newSubValue.trim());
     setNewSubTitle('');
     setNewSubValue('');
     setShowAddSub(false);
   };
 
-  const deleteSubParameter = (id: string) => {
-    setSubParameters(prev => prev.filter(p => p.id !== id));
-  };
-
-  const toggleSubStatus = (id: string) => {
-    setSubParameters(prev =>
-      prev.map(p =>
-        p.id === id
-          ? { ...p, status: p.status === 'operational' ? 'maintenance' : 'operational' }
-          : p
-      )
-    );
-  };
-
-  // ── Calcul des aéroports liés à cet item, pour l'aéroport courant ────
-  // Ne fait rien (tableau vide) si le contexte nécessaire n'est pas fourni.
   const hasLinkContext = Boolean(category && airportKey && links && allAirports);
 
   const linkedAirports = hasLinkContext
@@ -256,9 +201,6 @@ export default function NetworkItemModal({
             )}
           </div>
 
-          {/* ── Aéroports liés ──────────────────────────────────────────
-              Affiché seulement si le contexte de liaison a été fourni
-              (ouverture depuis un aéroport précis via NetworkModal) */}
           {hasLinkContext && (
             <div className="network-modal-category">
               <div className="network-modal-category-header">
@@ -291,7 +233,6 @@ export default function NetworkItemModal({
                         {linked.iata} — {linked.name}
                       </span>
 
-                      {/* nouveau : ouvre l'onglet dédié aux paramètres de cette liaison */}
                       {onOpenLinkDetail && (
                         <button
                           className="icon-btn icon-btn--sm"
@@ -324,7 +265,6 @@ export default function NetworkItemModal({
             </div>
           )}
 
-          {/* Sous-paramètres : section inchangée */}
           <div className="network-modal-category">
             <div className="network-modal-category-header">
               <h3>Sous-paramètres / Configuration détaillée</h3>
@@ -334,6 +274,10 @@ export default function NetworkItemModal({
                 </button>
               )}
             </div>
+
+            {subParameters.length === 0 && (
+              <p className="network-empty">Aucun sous-paramètre configuré</p>
+            )}
 
             <div className="network-item-grid">
               {subParameters.map(sub => (
@@ -345,14 +289,14 @@ export default function NetworkItemModal({
                       <>
                         <button
                           className="icon-btn icon-btn--sm"
-                          onClick={() => toggleSubStatus(sub.id)}
+                          onClick={() => onToggleSubParameterStatus?.(sub.id)}
                           title="Changer statut"
                         >
                           {sub.status === 'operational' ? 'M' : 'O'}
                         </button>
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
-                          onClick={() => deleteSubParameter(sub.id)}
+                          onClick={() => onDeleteSubParameter?.(sub.id)}
                         >
                           <Trash2 size={13} />
                         </button>
