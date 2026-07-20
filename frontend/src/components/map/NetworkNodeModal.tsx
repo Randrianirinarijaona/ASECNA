@@ -1,20 +1,26 @@
 // NetworkNodeModal.tsx
-// Gère les "points techniques" (relais VHF/HF, antennes SRNA...) : des
-// points sur la carte qui ne sont pas de vrais aéroports (Airport.isTechnicalPoint).
+// Gère les "points techniques" de la section Réseaux (relais VHF/HF, antennes
+// SRNA...) créés depuis les boutons "Ajouter/Supprimer un réseau" de la
+// sidebar, pour un sous-réseau donné.
 // mode 'add'    -> formulaire nom + coordonnées
 // mode 'remove' -> liste des points techniques existants, avec suppression
+//
+// Note : la création de points techniques génériques depuis "Réseau local"
+// utilise désormais un flux différent (clic sur la carte, cf. MapPage +
+// TechnicalPointDetailModal) ; ce composant ne gère donc plus que le cas où
+// category/subItem sont fournis par le parent.
 
 import { useState } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import { NETWORK_CATEGORY_LABELS, NETWORK_SUBITEMS } from '../../data/networkCategories';
+import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 // @ts-ignore
 import './NetworkModal.css';
 
 interface NetworkNodeModalProps {
-  category?: NetworkCategoryKey; // preset si ouvert depuis la section "Réseaux"
-  subItem?: string;
+  category: NetworkCategoryKey;
+  subItem: string;
   mode: 'add' | 'remove';
   airports: AirportsMap; // idéalement déjà filtré aux points techniques par le parent
   onCreate: (category: NetworkCategoryKey, subItem: string, name: string, coords: [number, number]) => void;
@@ -33,37 +39,22 @@ export default function NetworkNodeModal({
 }: NetworkNodeModalProps) {
   const [name, setName] = useState('');
 
-  // ⚠️ Il n'existe pas encore de flux "clic sur la carte" réutilisable comme
-  // pour les liaisons — les coordonnées sont saisies directement ici, avec
-  // le centre de Madagascar comme valeur par défaut (cf. MapPage). Si tu as
-  // un composant de sélection de position sur la carte, remplace ces deux
-  // champs par ce composant.
+  // Coordonnées saisies directement ici, avec le centre de Madagascar comme
+  // valeur par défaut (cf. MapPage).
   const [lat, setLat] = useState('-18.9');
   const [lng, setLng] = useState('46.8');
-
-  // Si category/subItem non fournis (ouverture générique depuis "Réseau local"),
-  // l'utilisateur les choisit lui-même via ces selects
-  const [selectedCategory, setSelectedCategory] = useState<NetworkCategoryKey>(category ?? 'sma');
-  const [selectedSubItem, setSelectedSubItem] = useState<string>(
-    subItem ?? NETWORK_SUBITEMS[category ?? 'sma'][0]
-  );
-
-  const effectiveCategory = category ?? selectedCategory;
-  const effectiveSubItem = subItem ?? selectedSubItem;
 
   const matchingNodes = Object.entries(airports).filter(
     ([, a]) =>
       a.isTechnicalPoint &&
-      (a.sections[effectiveCategory] || []).some(
-        (i) => i.title.toLowerCase() === effectiveSubItem.toLowerCase()
-      )
+      (a.sections[category] || []).some((i) => i.title.toLowerCase() === subItem.toLowerCase())
   );
 
   const handleCreate = () => {
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (!name.trim() || Number.isNaN(latNum) || Number.isNaN(lngNum)) return;
-    onCreate(effectiveCategory, effectiveSubItem, name.trim(), [latNum, lngNum]);
+    onCreate(category, subItem, name.trim(), [latNum, lngNum]);
     setName('');
   };
 
@@ -73,7 +64,9 @@ export default function NetworkNodeModal({
         <div className="network-modal-header">
           <div>
             <h2>{mode === 'add' ? 'Ajouter un réseau' : 'Supprimer un réseau'}</h2>
-            <p className="network-modal-subtitle">{subItem ?? 'Choisir un sous-réseau'}</p>
+            <p className="network-modal-subtitle">
+              {NETWORK_CATEGORY_LABELS[category]} • {subItem}
+            </p>
           </div>
           <button className="icon-btn" title="Fermer" onClick={onClose}>
             <X size={18} />
@@ -81,41 +74,6 @@ export default function NetworkNodeModal({
         </div>
 
         <div className="network-modal-body">
-          {/* Sélecteurs catégorie/sous-réseau, affichés seulement si non pré-définis par le parent */}
-          {!category && (
-            <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <label>Catégorie</label>
-              <select
-                className="form-input"
-                value={selectedCategory}
-                onChange={(e) => {
-                  const c = e.target.value as NetworkCategoryKey;
-                  setSelectedCategory(c);
-                  setSelectedSubItem(NETWORK_SUBITEMS[c][0]);
-                }}
-              >
-                {(Object.keys(NETWORK_SUBITEMS) as NetworkCategoryKey[]).map((c) => (
-                  <option key={c} value={c}>
-                    {NETWORK_CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-
-              <label>Sous-réseau</label>
-              <select
-                className="form-input"
-                value={selectedSubItem}
-                onChange={(e) => setSelectedSubItem(e.target.value)}
-              >
-                {NETWORK_SUBITEMS[selectedCategory].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           {mode === 'add' ? (
             <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               <label>Nom de l'endroit</label>

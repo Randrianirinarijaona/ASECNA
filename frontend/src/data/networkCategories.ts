@@ -16,6 +16,16 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
   srna: 'SRNA',
 };
 
+// ── Couleurs par catégorie (nouveau) ────────────────────────────────────
+// Utilisées partout où une liaison est dessinée (flèches sur la carte,
+// étiquettes de nom) pour garder une charte cohérente dans tout le projet :
+// SFA -> bleu, SMA -> vert. SRNA garde une couleur distincte par défaut.
+export const NETWORK_CATEGORY_COLORS: Record<NetworkCategoryKey, string> = {
+  sfa: '#2563eb', // Bleu
+  sma: '#16a34a', // Vert
+  srna: '#7c3aed', // Violet (non spécifié dans la demande, gardé distinct des deux autres)
+};
+
 // ── Paramètres de liaison (nouveau) ─────────────────────────────────────
 // Une liaison peut désormais porter ses propres paramètres nommés,
 // chacun contenant une ou plusieurs valeurs elles aussi nommées librement
@@ -39,7 +49,7 @@ export interface NetworkLink {
   itemTitle: string;       // le paramètre concerné (ex: "AMHS/RSFTA")
   fromAirportKey: string;
   toAirportKey: string;
-  parameters?: LinkParameter[]; // nouveau — paramètres propres à cette liaison
+  parameters?: LinkParameter[]; // paramètres propres à cette liaison
 }
 
 // Sous-réseaux "officiels" par catégorie, tels que demandés dans le cahier des charges.

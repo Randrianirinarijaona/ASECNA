@@ -1,5 +1,5 @@
 // components/map/NetworkArrow.tsx
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 // @ts-ignore: Missing type definitions for leaflet
 import L from 'leaflet';
@@ -10,7 +10,7 @@ interface NetworkArrowProps {
   color?: string;
   weight?: number;
   onClick?: () => void;
-  // ── nouveau : noms affichés directement sur la flèche ─────────────────
+  // ── noms affichés sur la flèche, uniquement quand une extrémité sort de l'écran ──
   fromName?: string;
   toName?: string;
 }
@@ -34,9 +34,15 @@ export default function NetworkArrow({
   toName,
 }: NetworkArrowProps) {
   const map = useMap();
+  // Réf conservée pour permettre un cleanup propre des listeners attachés
+  // conditionnellement (seulement si fromName/toName sont fournis).
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (positions.length < 2) return;
+
+    const start = L.latLng(positions[0]);
+    const end = L.latLng(positions[positions.length - 1]);
 
     // Création de la ligne principale
     const polyline = L.polyline(positions, {
@@ -71,14 +77,18 @@ export default function NetworkArrow({
     polyline.addTo(map);
     decorator.addTo(map);
 
-    // ── Étiquette permanente avec le nom des aéroports liés (nouveau) ──
-    // Positionnée au milieu du segment, non-interactive (pointer-events: none)
-    // pour ne jamais gêner le clic sur la ligne/flèche. Reste visible à tout
-    // niveau de zoom, contrairement au simple survol/tooltip natif Leaflet.
+    // ── Étiquette conditionnelle avec le nom des aéroports liés ────────
+    // Comportement demandé : masquée quand les DEUX extrémités sont visibles
+    // à l'écran, affichée automatiquement dès qu'une (ou les deux) sort de
+    // la zone visible. Non-interactive (pointer-events: none) pour ne
+    // jamais gêner le clic sur la ligne/flèche. Positionnée légèrement
+    // au-dessus du milieu du segment pour limiter le chevauchement avec la
+    // ligne et la flèche elle-même.
     let label: L.Marker | null = null;
+
     if (fromName && toName) {
-      const midLat = (positions[0][0] + positions[positions.length - 1][0]) / 2;
-      const midLng = (positions[0][1] + positions[positions.length - 1][1]) / 2;
+      const midLat = (start.lat + end.lat) / 2;
+      const midLng = (start.lng + end.lng) / 2;
       const labelText = `${escapeHtml(fromName)} → ${escapeHtml(toName)}`;
 
       label = L.marker([midLat, midLng], {
@@ -96,13 +106,36 @@ export default function NetworkArrow({
             white-space:nowrap;
             box-shadow:0 1px 3px rgba(0,0,0,0.35);
             pointer-events:none;
-            transform:translate(-50%, -50%);
+            transform:translate(-50%, -160%);
           ">${labelText}</div>`,
         }),
         interactive: false,
         zIndexOffset: 1000,
+        opacity: 0, // état par défaut : masqué (recalculé juste après l'ajout)
       });
       label.addTo(map);
+
+      // Recalcule la visibilité : masquée seulement si les deux extrémités
+      // sont dans le rectangle actuellement visible de la carte.
+      const updateVisibility = () => {
+        if (!label) return;
+        const bounds = map.getBounds();
+        const bothEndsVisible = bounds.contains(start) && bounds.contains(end);
+        label.setOpacity(bothEndsVisible ? 0 : 1);
+      };
+
+      updateVisibility();
+
+      // 'move'/'zoom' se déclenchent en continu pendant l'animation de
+      // déplacement/zoom (contrairement à 'moveend'/'zoomend'), ce qui
+      // garantit un comportement fluide sans devoir recréer la couche.
+      map.on('move', updateVisibility);
+      map.on('zoom', updateVisibility);
+
+      cleanupRef.current = () => {
+        map.off('move', updateVisibility);
+        map.off('zoom', updateVisibility);
+      };
     }
 
     // Gestion du clic sur la ligne
@@ -116,6 +149,8 @@ export default function NetworkArrow({
       map.removeLayer(polyline);
       map.removeLayer(decorator);
       if (label) map.removeLayer(label);
+      cleanupRef.current?.();
+      cleanupRef.current = null;
     };
   }, [positions, color, weight, onClick, fromName, toName, map]);
 

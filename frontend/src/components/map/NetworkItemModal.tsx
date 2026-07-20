@@ -9,7 +9,6 @@ import {
   Edit2,
   ToggleLeft,
   ToggleRight,
-  Link2,
 } from 'lucide-react';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
@@ -22,7 +21,7 @@ interface NetworkItemModalProps {
   itemTitle: string;
   itemStatus: 'operational' | 'maintenance';
   itemDescription?: string;
-  // nouveau : données réelles, persistées via useAirportsData (plus de state local factice)
+  // données réelles, persistées via useAirportsData (plus de state local factice)
   subParameters: NetworkSubParameter[];
   airportName: string;
   isAdmin: boolean;
@@ -42,7 +41,6 @@ interface NetworkItemModalProps {
   allAirports?: AirportsMap;
   onStartLink?: () => void;
   onDeleteLink?: (linkId: string) => void;
-  onNavigateToAirport?: (key: string) => void;
   onOpenLinkDetail?: (linkId: string) => void;
 }
 
@@ -64,7 +62,6 @@ export default function NetworkItemModal({
   allAirports,
   onStartLink,
   onDeleteLink,
-  onNavigateToAirport,
   onOpenLinkDetail,
 }: NetworkItemModalProps) {
   const [editing, setEditing] = useState(false);
@@ -97,7 +94,12 @@ export default function NetworkItemModal({
     setShowAddSub(false);
   };
 
-  const hasLinkContext = Boolean(category && airportKey && links && allAirports);
+  // La section "Aéroports liés" ne concerne que les réseaux de type liaison
+  // point-à-point (SFA : AMHS, SMT...). Pour SMA (VHF, HF), cette section
+  // est volontairement absente : ces réseaux ne fonctionnent pas par
+  // liaisons entre deux aéroports précis dans ce module.
+  const hasLinkContext =
+    Boolean(category && category !== 'sma' && airportKey && links && allAirports);
 
   const linkedAirports = hasLinkContext
     ? links!
@@ -225,26 +227,14 @@ export default function NetworkItemModal({
                   <div
                     key={linked.linkId}
                     className="network-item-card"
-                    style={{ cursor: onNavigateToAirport ? 'pointer' : 'default' }}
-                    onClick={() => onNavigateToAirport?.(linked.key)}
+                    style={{ cursor: onOpenLinkDetail ? 'pointer' : 'default' }}
+                    title="Voir les paramètres de cette liaison"
+                    onClick={() => onOpenLinkDetail?.(linked.linkId)}
                   >
                     <div className="network-item-card-top">
                       <span className="network-item-title">
                         {linked.iata} — {linked.name}
                       </span>
-
-                      {onOpenLinkDetail && (
-                        <button
-                          className="icon-btn icon-btn--sm"
-                          title="Voir les paramètres de cette liaison"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenLinkDetail(linked.linkId);
-                          }}
-                        >
-                          <Link2 size={13} />
-                        </button>
-                      )}
 
                       {isAdmin && onDeleteLink && (
                         <button

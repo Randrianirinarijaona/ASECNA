@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
 
@@ -14,13 +14,48 @@ import AirportMarker from '../../components/map/AirportMarker';
 import LinkManagerModal from '../../components/map/LinkManagerModal';
 import NetworkNodeModal from '../../components/map/NetworkNodeModal';
 import LinkDetailModal from '../../components/map/LinkDetailModal';
+import TechnicalPointDetailModal from '../../components/map/TechnicalPointDetailModal';
 
 import { useAirportsData } from '../../hooks/useAirportsData';
+import { NETWORK_CATEGORY_COLORS } from '../../data/networkCategories';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
 
 import { useAuth, useToast, useTheme } from '../../hooks';
 // @ts-ignore
 import './MapPage.css';
+
+// Catégorie technique utilisée par défaut pour tous les points créés depuis
+// "Réseau local" (le module ne distingue pas de sous-réseau particulier,
+// contrairement aux points créés depuis la section "Réseaux").
+const TECHNICAL_POINT_CATEGORY: NetworkCategoryKey = 'srna';
+const TECHNICAL_POINT_ITEM_TITLE = 'Point technique';
+
+// Bornes du monde, utilisées pour empêcher Leaflet de répéter les tuiles
+// horizontalement quand on dézoome trop (cf. point 6 de la demande).
+const WORLD_BOUNDS: [[number, number], [number, number]] = [
+  [-90, -180],
+  [90, 180],
+];
+
+// Petit composant utilitaire (aucun rendu visuel) qui écoute les clics sur
+// la carte pour placer un nouveau point technique en mode "placement actif".
+// Isolé dans son propre composant car useMapEvents doit être appelé à
+// l'intérieur du MapContainer.
+function TechnicalPointClickCatcher({
+  active,
+  onPlace,
+}: {
+  active: boolean;
+  onPlace: (coords: [number, number]) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      if (!active) return;
+      onPlace([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
 
 export default function MapPage() {
   const { user } = useAuth();
@@ -32,23 +67,23 @@ export default function MapPage() {
 
   const {
     airports,
-  links,
-  addAirport,
-  addTechnicalPoint,
-  deleteAirport,
-  addNetworkItem,
-  deleteNetworkItem,
-  updateNetworkItemStatus,
-  updateNetworkItemDescription, // nouveau
-  addNetworkLink,
-  deleteNetworkLink,
-  addLinkParameter,
-  deleteLinkParameter,
-  addLinkParameterValue,
-  deleteLinkParameterValue,
-  addItemSubParameter,          // nouveau
-  deleteItemSubParameter,       // nouveau
-  toggleItemSubParameterStatus, // nouveau
+    links,
+    addAirport,
+    addTechnicalPoint,
+    deleteAirport,
+    addNetworkItem,
+    deleteNetworkItem,
+    updateNetworkItemStatus,
+    updateNetworkItemDescription,
+    addNetworkLink,
+    deleteNetworkLink,
+    addLinkParameter,
+    deleteLinkParameter,
+    addLinkParameterValue,
+    deleteLinkParameterValue,
+    addItemSubParameter,
+    deleteItemSubParameter,
+    toggleItemSubParameterStatus,
   } = useAirportsData();
 
   const [activeModule, setActiveModule] = useState<MapModule>(null);
@@ -74,10 +109,16 @@ export default function MapPage() {
   } | null>(null);
 
   const [nodeManager, setNodeManager] = useState<{
-    category?: NetworkCategoryKey;
-    subItem?: string;
+    category: NetworkCategoryKey;
+    subItem: string;
     mode: 'add' | 'remove';
   } | null>(null);
+
+  // ── Réseau local : placement d'un nouveau point technique ────────────
+  // true pendant la fenêtre "cliquez sur la carte pour placer le point"
+  const [placingTechnicalPoint, setPlacingTechnicalPoint] = useState(false);
+  // clé du point technique dont l'onglet de configuration est ouvert
+  const [technicalPointDetailKey, setTechnicalPointDetailKey] = useState<string | null>(null);
 
   const centerMadagascar: [number, number] = [-18.9, 46.8];
 
@@ -92,6 +133,18 @@ export default function MapPage() {
         addNetworkLink(linkingState.category, linkingState.itemTitle, linkingState.fromAirportKey, key);
       }
       setLinkingState(null);
+      return;
+    }
+
+    // Dans le module "Réseau local", cliquer sur un point technique ouvre
+    // directement son onglet de configuration dédié plutôt que le
+    // NetworkModal générique (SFA/SMA/SRNA) destiné aux vrais aéroports.
+    if (activeModule === 'reseauLocal') {
+      if (!canAccessNetworkSettings) {
+        showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
+        return;
+      }
+      setTechnicalPointDetailKey(key);
       return;
     }
 
@@ -163,6 +216,35 @@ export default function MapPage() {
     return { link, from, to };
   }, [selectedLinkId, links, airports]);
 
+  // Point technique actuellement ouvert dans TechnicalPointDetailModal.
+  const technicalPointDetail = useMemo(() => {
+    if (!technicalPointDetailKey) return null;
+    const point = airports[technicalPointDetailKey];
+    if (!point) return null;
+    const items = point.sections[TECHNICAL_POINT_CATEGORY] || [];
+    const item = items.find((i) => i.title === TECHNICAL_POINT_ITEM_TITLE) || items[0];
+    if (!item) return null;
+    return { key: technicalPointDetailKey, point, item };
+  }, [technicalPointDetailKey, airports]);
+
+  const handlePlaceTechnicalPoint = useCallback(
+    (coords: [number, number]) => {
+      const pointNumber = Object.keys(technicalPoints).length + 1;
+      const key = addTechnicalPoint(
+        TECHNICAL_POINT_CATEGORY,
+        TECHNICAL_POINT_ITEM_TITLE,
+        `Point technique ${pointNumber}`,
+        coords
+      );
+      setPlacingTechnicalPoint(false);
+      // Le nouveau point apparaît immédiatement sur la carte (état `airports`
+      // mis à jour par addTechnicalPoint) ; on ouvre aussitôt son onglet de
+      // configuration, vide au départ.
+      setTechnicalPointDetailKey(key);
+    },
+    [addTechnicalPoint, technicalPoints]
+  );
+
   return (
     <div className="map-page">
       <MapHeader />
@@ -177,13 +259,15 @@ export default function MapPage() {
             setSelectedLinkId(null);
             setLinkManager(null);
             setNodeManager(null);
+            setPlacingTechnicalPoint(false);
+            setTechnicalPointDetailKey(null);
           }}
           onNetworkSubItemClick={handleNetworkSubItemClick}
           activeNetworkUsage={networkUsage}
           isAdmin={isAdmin}
           onAddAirportClick={() => setShowAddAirport(true)}
           technicalPoints={technicalPoints}
-          onAddTechnicalPointClick={() => setNodeManager({ mode: 'add' })}
+          onAddTechnicalPointClick={() => setPlacingTechnicalPoint(true)}
           onDeleteTechnicalPoint={(key) => deleteAirport(key)}
           onAddLinkClick={(category, subItem) => setLinkManager({ category, subItem, mode: 'add' })}
           onRemoveLinkClick={(category, subItem) => setLinkManager({ category, subItem, mode: 'remove' })}
@@ -203,10 +287,25 @@ export default function MapPage() {
             </div>
           )}
 
+          {placingTechnicalPoint && (
+            <div className="linking-banner">
+              <span>Cliquez sur la carte pour placer le nouveau point technique</span>
+              <button className="linking-banner-cancel" onClick={() => setPlacingTechnicalPoint(false)}>
+                Annuler
+              </button>
+            </div>
+          )}
+
           <MapContainer
             {...({
               center: centerMadagascar,
               zoom: 7,
+              minZoom: 3,
+              // Empêche Leaflet de créer des copies du monde répétées
+              // horizontalement lors d'un zoom arrière important.
+              worldCopyJump: false,
+              maxBounds: WORLD_BOUNDS,
+              maxBoundsViscosity: 1.0,
               style: { height: '100%', width: '100%' },
             } as any)}
           >
@@ -220,7 +319,15 @@ export default function MapPage() {
                   resolvedTheme === 'dark'
                     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                     : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                // Empêche la répétition horizontale des tuiles elles-mêmes
+                // (indépendamment des bornes de la carte ci-dessus).
+                noWrap: true,
               } as any)}
+            />
+
+            <TechnicalPointClickCatcher
+              active={placingTechnicalPoint}
+              onPlace={handlePlaceTechnicalPoint}
             />
 
             {(activeModule === 'aeroport' || activeModule === 'reseauLocal') &&
@@ -240,7 +347,7 @@ export default function MapPage() {
                 <NetworkArrow
                   key={conn.id}
                   positions={conn.positions}
-                  color="var(--color-primary)"
+                  color={NETWORK_CATEGORY_COLORS[conn.category]}
                   weight={5}
                   fromName={conn.fromName}
                   toName={conn.toName}
@@ -251,28 +358,27 @@ export default function MapPage() {
 
           {selectedAirportKey && airports[selectedAirportKey] && (
             <NetworkModal
-  airportKey={selectedAirportKey}
-  airport={airports[selectedAirportKey]}
-  isAdmin={isAdmin}
-  allAirports={airports}
-  links={links}
-  onClose={() => setSelectedAirportKey(null)}
-  onDeleteAirport={(key) => {
-    deleteAirport(key);
-    setSelectedAirportKey(null);
-  }}
-  onAddItem={(category, item) => addNetworkItem(selectedAirportKey, category, item as any)}
-  onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
-  onUpdateItemStatus={updateNetworkItemStatus}
-  onUpdateItemDescription={updateNetworkItemDescription}
-  onAddSubParameter={addItemSubParameter}
-  onDeleteSubParameter={deleteItemSubParameter}
-  onToggleSubParameterStatus={toggleItemSubParameterStatus}
-  onStartLink={handleStartLink}
-  onDeleteLink={deleteNetworkLink}
-  onOpenLinkDetail={openLinkDetail}
-  onNavigateToAirport={(key) => setSelectedAirportKey(key)}
-/>
+              airportKey={selectedAirportKey}
+              airport={airports[selectedAirportKey]}
+              isAdmin={isAdmin}
+              allAirports={airports}
+              links={links}
+              onClose={() => setSelectedAirportKey(null)}
+              onDeleteAirport={(key) => {
+                deleteAirport(key);
+                setSelectedAirportKey(null);
+              }}
+              onAddItem={(category, item) => addNetworkItem(selectedAirportKey, category, item as any)}
+              onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
+              onUpdateItemStatus={updateNetworkItemStatus}
+              onUpdateItemDescription={updateNetworkItemDescription}
+              onAddSubParameter={addItemSubParameter}
+              onDeleteSubParameter={deleteItemSubParameter}
+              onToggleSubParameterStatus={toggleItemSubParameterStatus}
+              onStartLink={handleStartLink}
+              onDeleteLink={deleteNetworkLink}
+              onOpenLinkDetail={openLinkDetail}
+            />
           )}
         </div>
       </div>
@@ -324,6 +430,47 @@ export default function MapPage() {
           onDeleteParameter={deleteLinkParameter}
           onAddValue={addLinkParameterValue}
           onDeleteValue={deleteLinkParameterValue}
+        />
+      )}
+
+      {technicalPointDetail && (
+        <TechnicalPointDetailModal
+          airportKey={technicalPointDetail.key}
+          airport={technicalPointDetail.point}
+          category={TECHNICAL_POINT_CATEGORY}
+          itemTitle={technicalPointDetail.item.title}
+          subParameters={technicalPointDetail.item.subParameters || []}
+          isAdmin={isAdmin}
+          onClose={() => setTechnicalPointDetailKey(null)}
+          onAddSubParameter={(title, value) =>
+            addItemSubParameter(
+              technicalPointDetail.key,
+              TECHNICAL_POINT_CATEGORY,
+              technicalPointDetail.item.title,
+              title,
+              value
+            )
+          }
+          onDeleteSubParameter={(subId) =>
+            deleteItemSubParameter(
+              technicalPointDetail.key,
+              TECHNICAL_POINT_CATEGORY,
+              technicalPointDetail.item.title,
+              subId
+            )
+          }
+          onToggleSubParameterStatus={(subId) =>
+            toggleItemSubParameterStatus(
+              technicalPointDetail.key,
+              TECHNICAL_POINT_CATEGORY,
+              technicalPointDetail.item.title,
+              subId
+            )
+          }
+          onDeletePoint={() => {
+            deleteAirport(technicalPointDetail.key);
+            setTechnicalPointDetailKey(null);
+          }}
         />
       )}
     </div>

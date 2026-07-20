@@ -32,7 +32,6 @@ interface NetworkModalProps {
     itemTitle: string,
     status: 'operational' | 'maintenance'
   ) => void;
-  // nouveau
   onUpdateItemDescription: (
     airportKey: string,
     category: NetworkCategoryKey,
@@ -61,7 +60,6 @@ interface NetworkModalProps {
 
   onStartLink: (category: NetworkCategoryKey, itemTitle: string) => void;
   onDeleteLink: (linkId: string) => void;
-  onNavigateToAirport: (key: string) => void;
   onOpenLinkDetail: (linkId: string) => void;
 }
 
@@ -84,7 +82,6 @@ export default function NetworkModal({
   onToggleSubParameterStatus,
   onStartLink,
   onDeleteLink,
-  onNavigateToAirport,
   onOpenLinkDetail,
 }: NetworkModalProps) {
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
@@ -252,10 +249,6 @@ export default function NetworkModal({
             }}
             onDeleteLink={onDeleteLink}
             onOpenLinkDetail={onOpenLinkDetail}
-            onNavigateToAirport={(key) => {
-              setSelectedItemKey(null);
-              onNavigateToAirport(key);
-            }}
           />
         )}
       </div>
