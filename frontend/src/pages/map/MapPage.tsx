@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
 
