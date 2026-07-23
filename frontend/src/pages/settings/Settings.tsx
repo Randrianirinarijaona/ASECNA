@@ -4,6 +4,7 @@ import { useAuth, useTheme, useToast } from '../../hooks';
 import { authService } from '../../services/api.service';
 import { ConfirmModal } from '../../components/ui/Modal';
 import type { ThemeMode } from '../../types';
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './Settings.css';
 
 const THEMES: { value: ThemeMode; label: string; icon: React.ReactNode }[] = [
@@ -50,7 +51,6 @@ export default function Settings() {
       </div>
 
       <div className="settings-sections">
-        {/* Theme */}
         <div className="card settings-card">
           <h2 className="card-title">Appearance</h2>
           <p className="settings-desc">Choose how the interface looks to you</p>
@@ -71,12 +71,11 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Change password */}
         <div className="card settings-card">
-          <h2 className="card-title">
-            <Lock size={16} /> Change password
+          <h2 className="card-title-iconic">
+            <Lock size={18} /> Change password
           </h2>
-          <form onSubmit={handlePasswordChange}>
+          <form onSubmit={handlePasswordChange} className="settings-form">
             <div className="form-group">
               <label className="form-label">Current password</label>
               <input
@@ -111,32 +110,30 @@ export default function Settings() {
               />
             </div>
             {pwError && <p className="form-error">{pwError}</p>}
-            <button type="submit" className="btn btn-primary" disabled={isSavingPw}>
+            <button type="submit" className="btn btn-primary settings-submit-btn" disabled={isSavingPw}>
               {isSavingPw ? 'Saving…' : 'Update password'}
             </button>
           </form>
         </div>
 
-        {/* Account info */}
         <div className="card settings-card">
           <h2 className="card-title">Account information</h2>
           <dl className="account-info">
-            <dt>Username</dt><dd>{user?.username}</dd>
-            <dt>Role</dt><dd><span className={`badge badge-${user?.role}`}>{user?.role}</span></dd>
-            <dt>Status</dt><dd><span className="badge badge-active">Active</span></dd>
-            <dt>Account ID</dt><dd className="mono">{user?.id || '—'}</dd>
+            <div className="info-row"><dt>Username</dt><dd>{user?.username}</dd></div>
+            <div className="info-row"><dt>Role</dt><dd><span className={`badge-role badge-role--${user?.role}`}>{user?.role}</span></dd></div>
+            <div className="info-row"><dt>Status</dt><dd><span className="badge-status badge-status--active">Active</span></dd></div>
+            <div className="info-row"><dt>Account ID</dt><dd className="mono">{user?.id || '—'}</dd></div>
           </dl>
         </div>
 
-        {/* Danger zone */}
         <div className="card settings-card settings-card--danger">
           <h2 className="card-title danger-title">
-            <AlertTriangle size={16} /> Danger zone
+            <AlertTriangle size={18} /> Danger zone
           </h2>
           <p className="settings-desc">Irreversible actions. Proceed with caution.</p>
           <div className="danger-actions">
             <div className="danger-item">
-              <div>
+              <div className="danger-item-text">
                 <div className="danger-item-title">Sign out everywhere</div>
                 <div className="danger-item-desc">Revoke all active sessions</div>
               </div>
@@ -148,7 +145,7 @@ export default function Settings() {
               </button>
             </div>
             <div className="danger-item">
-              <div>
+              <div className="danger-item-text">
                 <div className="danger-item-title">Delete account</div>
                 <div className="danger-item-desc">Permanently remove your account and data</div>
               </div>

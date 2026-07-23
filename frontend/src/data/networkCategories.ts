@@ -1,5 +1,5 @@
 //networkCategories.ts
-import type { Airport } from '../types';
+import type { Airport, Parameter, ParameterValue } from '../types';
 
 export type NetworkCategoryKey = 'sfa' | 'sma' | 'srna';
 
@@ -7,6 +7,9 @@ export interface NetworkItem {
   title: string;
   description?: string;
   details?: string[];
+  // Optionnel : reste utilisé pour SMA/SRNA. Les items SFA ne définissent
+  // volontairement plus ce champ (cf. point 3 — suppression du statut
+  // global pour les items SFA).
   status?: 'operational' | 'maintenance';
 }
 
@@ -16,32 +19,35 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
   srna: 'SRNA',
 };
 
-// ── Couleurs par catégorie (nouveau) ────────────────────────────────────
-// Utilisées partout où une liaison est dessinée (flèches sur la carte,
-// étiquettes de nom) pour garder une charte cohérente dans tout le projet :
-// SFA -> bleu, SMA -> vert. SRNA garde une couleur distincte par défaut.
+// ── Couleurs par catégorie (fallback pour SMA/SRNA) ──────────────────────
 export const NETWORK_CATEGORY_COLORS: Record<NetworkCategoryKey, string> = {
-  sfa: '#2563eb', // Bleu
+  sfa: '#2563eb', // Bleu (fallback si le sous-réseau SFA n'est pas reconnu)
   sma: '#16a34a', // Vert
-  srna: '#7c3aed', // Violet (non spécifié dans la demande, gardé distinct des deux autres)
+  srna: '#7c3aed', // Violet
 };
 
-// ── Paramètres de liaison (nouveau) ─────────────────────────────────────
-// Une liaison peut désormais porter ses propres paramètres nommés,
-// chacun contenant une ou plusieurs valeurs elles aussi nommées librement
-// par l'admin (ex: paramètre "Réseau IP" → valeurs "@IP : 10.2.0.0", "Netmask : ...")
+// ── Couleurs par sous-réseau SFA ──────────────────────────────────────────
+export const SFA_ITEM_COLORS: Record<string, string> = {
+  amhs: '#2563eb',   // Bleu
+  smt: '#16a34a',    // Vert
+  aidc: '#eab308',   // Jaune
+  'ats-ds': '#dc2626', // Rouge
+};
 
-export interface LinkParameterValue {
-  id: string;
-  name: string;   // ex: "Adresse IP", "Masque réseau", "Gateway"
-  text: string;   // ex: "10.2.0.5", "255.255.255.0"
+export function getNetworkLinkColor(category: NetworkCategoryKey, itemTitle: string): string {
+  if (category === 'sfa') {
+    const normalized = itemTitle.toLowerCase();
+    const matchKey = Object.keys(SFA_ITEM_COLORS).find((key) => normalized.includes(key));
+    if (matchKey) return SFA_ITEM_COLORS[matchKey];
+  }
+  return NETWORK_CATEGORY_COLORS[category];
 }
 
-export interface LinkParameter {
-  id: string;
-  name: string; // ex: "Réseau IP"
-  values: LinkParameterValue[];
-}
+// ── Paramètres de liaison ─────────────────────────────────────────────────
+// Alias vers le type générique `Parameter`/`ParameterValue` (types/index.ts),
+// réutilisé tel quel par les informations locales d'un aéroport.
+export type LinkParameterValue = ParameterValue;
+export type LinkParameter = Parameter;
 
 export interface NetworkLink {
   id: string;
@@ -52,8 +58,6 @@ export interface NetworkLink {
   parameters?: LinkParameter[]; // paramètres propres à cette liaison
 }
 
-// Sous-réseaux "officiels" par catégorie, tels que demandés dans le cahier des charges.
-// ⚠️ Adapte cette liste si ta nomenclature ASECNA diffère.
 export const NETWORK_SUBITEMS: Record<NetworkCategoryKey, string[]> = {
   sfa: ['AMHS', 'SMT', 'AIDC', 'ATS-DS'],
   sma: ['VHF', 'HF'],
@@ -64,21 +68,9 @@ export interface AirportNetworkMatch {
   key: string;
   airport: Airport;
   matchedTitle: string;
-  status?: 'operational' | 'maintenance';
+  status?: 'operational' | 'maintenance' | 'planned';
 }
 
-/**
- * Retourne tous les aéroports qui possèdent un paramètre réseau correspondant
- * à `subItem` dans la catégorie `category`.
- *
- * On compare avec "includes" (insensible à la casse) car les titres réels
- * dans les données (ex: "AMHS/RSFTA") peuvent être plus précis que le libellé
- * générique du sous-réseau (ex: "AMHS").
- *
- * `airportsData` est passé en paramètre plutôt qu'importé directement, pour
- * que la fonction fonctionne aussi bien avec les données mock statiques
- * qu'avec l'état "live" géré par useAirportsData (CRUD admin).
- */
 export function getAirportsByNetwork(
   airportsData: Record<string, Airport>,
   category: NetworkCategoryKey,

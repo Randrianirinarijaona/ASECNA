@@ -1,15 +1,11 @@
 // LinkManagerModal.tsx
-// Ouvert depuis la Sidebar (catégorie SFA) pour créer ou supprimer des
-// liaisons sans passer par le clic sur la carte.
-// mode 'add'    -> formulaire départ/arrivée
-// mode 'remove' -> liste des liaisons existantes pour ce sous-réseau
-
 import { useState } from 'react';
 import { X, Unlink } from 'lucide-react';
+import { getNetworkLinkColor } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 // @ts-ignore
-import './NetworkModal.css'; // réutilise les styles existants (overlay, form-input, btn...)
+import './NetworkModal.css';
 
 interface LinkManagerModalProps {
   category: NetworkCategoryKey;
@@ -37,9 +33,6 @@ export default function LinkManagerModal({
   const [fromKey, setFromKey] = useState('');
   const [toKey, setToKey] = useState('');
 
-  // Liaisons existantes pour ce sous-réseau (comparaison "includes" comme
-  // ailleurs dans le projet : le titre réel peut être plus précis, ex.
-  // "AMHS/RSFTA" pour le sous-réseau générique "AMHS")
   const matchingLinks = links.filter(
     (l) => l.category === category && l.itemTitle.toLowerCase().includes(subItem.toLowerCase())
   );
@@ -110,6 +103,16 @@ export default function LinkManagerModal({
                   return (
                     <div key={link.id} className="network-item-card">
                       <div className="network-item-card-top">
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            background: getNetworkLinkColor(category, link.itemTitle),
+                            flexShrink: 0,
+                          }}
+                        />
                         <span className="network-item-title">
                           {(from?.iata || from?.name) ?? '—'} → {(to?.iata || to?.name) ?? '—'}
                         </span>

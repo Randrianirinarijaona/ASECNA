@@ -1,14 +1,118 @@
 .network-item-modal {
   max-width: 720px;
+  width: 100%;
 }
 
 .sub-parameter-card {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid var(--color-primary) !important;
 }
 
 .network-item-detail {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 8px;
+  background: var(--color-bg);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
   margin-bottom: 1.5rem;
+}
+
+.network-item-title-large {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.network-item-desc-main {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin: 8px 0 12px;
+  line-height: 1.5;
+}
+
+.network-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.network-item-grid-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.network-item-card--interactive {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.network-item-card--interactive:hover {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.02);
+  transform: translateY(-1px);
+}
+
+.network-sub-val {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  margin: 6px 0 4px;
+}
+
+.btn-text-action {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.btn-text-action:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.network-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.network-add-form-panel {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.network-add-form-panel h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 10px;
+}
+
+.network-add-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 480px) {
+  .network-add-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.network-add-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

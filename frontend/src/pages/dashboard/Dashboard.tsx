@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Map, Users, Bell, TrendingUp, Plane, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../hooks';
 import { AIRPORTS } from '../../data/airportsData';
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './Dashboard.css';
 
 interface StatCardProps {
@@ -39,7 +40,6 @@ export default function Dashboard() {
 
   return (
     <div className="page dashboard-page">
-      {/* Greeting */}
       <div className="dashboard-greeting">
         <div>
           <h1 className="page-title">
@@ -56,44 +56,42 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats row */}
       <div className="stats-grid">
         <StatCard
           label="Airports monitored"
           value={airportList.length}
           icon={<Plane size={20} />}
-          color="rgba(99,102,241,0.15)"
+          color="rgba(99, 102, 241, 0.12)"
           trend="↑ All operational"
         />
         <StatCard
           label="Active connections"
           value={42}
           icon={<TrendingUp size={20} />}
-          color="rgba(34,197,94,0.15)"
+          color="rgba(34, 197, 94, 0.12)"
           trend="↑ 12% this week"
         />
         <StatCard
           label="Notifications"
           value={3}
           icon={<Bell size={20} />}
-          color="rgba(245,158,11,0.15)"
+          color="rgba(245, 158, 11, 0.12)"
           trend="3 unread"
         />
         <StatCard
           label="System users"
           value={user?.role === 'admin' ? '—' : '—'}
           icon={<Users size={20} />}
-          color="rgba(96,165,250,0.15)"
+          color="rgba(96, 165, 250, 0.12)"
           trend={user?.role === 'admin' ? 'View admin panel' : 'Contact admin'}
         />
       </div>
 
-      {/* Airport grid */}
       <div className="dashboard-section">
         <div className="section-header">
           <h2 className="section-title">Airports</h2>
           <Link to="/" className="section-link">
-            <Map size={14} /> View on map
+            <Map size={15} /> View on map
           </Link>
         </div>
         <div className="airport-grid">
@@ -103,18 +101,19 @@ export default function Dashboard() {
                 <div className="airport-status-dot" />
                 <span className="airport-iata">{airport.iata.split(' ')[0]}</span>
               </div>
-              <div className="airport-name">{airport.name}</div>
-              <div className="airport-iata-full">{airport.iata}</div>
+              <div className="airport-card-body-content">
+                <div className="airport-name">{airport.name}</div>
+                <div className="airport-iata-full">{airport.iata}</div>
+              </div>
               <div className="airport-footer">
-                <span className="badge badge-active">Operational</span>
-                <ChevronRight size={14} className="airport-arrow" />
+                <span className="badge-status-dot">Operational</span>
+                <ChevronRight size={16} className="airport-arrow" />
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Recent activity */}
       <div className="dashboard-section">
         <div className="section-header">
           <h2 className="section-title">Recent activity</h2>

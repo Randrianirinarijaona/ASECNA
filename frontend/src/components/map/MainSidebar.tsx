@@ -12,7 +12,6 @@ import {
 
 import { NETWORK_CATEGORY_LABELS, NETWORK_SUBITEMS } from '../../data/networkCategories';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
-import type { Airport } from '../../types';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 
 // @ts-ignore: CSS side-effect import handled by build tooling
@@ -27,9 +26,15 @@ interface MainSidebarProps {
   activeNetworkUsage: { category: NetworkCategoryKey; subItem: string } | null;
   isAdmin: boolean;
   onAddAirportClick: () => void;
-  technicalPoints: AirportsMap;
-  onAddTechnicalPointClick: () => void;
-  onDeleteTechnicalPoint: (key: string) => void;
+
+  // Réseau local : tous les vrais aéroports (pour le picker "Ajouter un
+  // aéroport"), la liste de ceux déjà suivis, et les actions associées.
+  airports: AirportsMap;
+  localNetworkAirportKeys: string[];
+  onAddAirportToLocalNetwork: (key: string) => void;
+  onRemoveAirportFromLocalNetwork: (key: string) => void;
+  onSelectAirportForLocal: (key: string) => void;
+
   onAddLinkClick: (category: NetworkCategoryKey, subItem: string) => void;
   onRemoveLinkClick: (category: NetworkCategoryKey, subItem: string) => void;
   onAddNetworkNodeClick: (category: NetworkCategoryKey, subItem: string) => void;
@@ -43,20 +48,34 @@ export default function MainSidebar({
   activeNetworkUsage,
   isAdmin,
   onAddAirportClick,
-  technicalPoints,
-  onAddTechnicalPointClick,
-  onDeleteTechnicalPoint,
+  airports,
+  localNetworkAirportKeys,
+  onAddAirportToLocalNetwork,
+  onRemoveAirportFromLocalNetwork,
+  onSelectAirportForLocal,
   onAddLinkClick,
   onRemoveLinkClick,
   onAddNetworkNodeClick,
   onRemoveNetworkNodeClick,
 }: MainSidebarProps) {
   const [openCategory, setOpenCategory] = useState<NetworkCategoryKey | null>(null);
+  const [showLocalAddPicker, setShowLocalAddPicker] = useState(false);
 
   const handleModuleClick = (module: MapModule) => {
     onModuleChange(activeModule === module ? null : module);
     setOpenCategory(null);
+    setShowLocalAddPicker(false);
   };
+
+  // Seuls les vrais aéroports peuvent recevoir des informations locales
+  // (les points techniques SMA/SRNA ne sont pas concernés).
+  const realAirportEntries = Object.entries(airports).filter(([, a]) => !a.isTechnicalPoint);
+  const addedLocalAirports = realAirportEntries.filter(([key]) =>
+    localNetworkAirportKeys.includes(key)
+  );
+  const availableLocalAirports = realAirportEntries.filter(
+    ([key]) => !localNetworkAirportKeys.includes(key)
+  );
 
   return (
     <aside className="main-sidebar">
@@ -175,23 +194,53 @@ export default function MainSidebar({
       {activeModule === 'reseauLocal' && (
         <div className="main-sidebar-section">
           {isAdmin && (
-            <button className="main-sidebar-add-btn" onClick={onAddTechnicalPointClick}>
-              <Plus size={15} /> Ajouter un point technique
+            <button
+              className="main-sidebar-add-btn"
+              onClick={() => setShowLocalAddPicker((v) => !v)}
+            >
+              <Plus size={15} /> Ajouter un aéroport
             </button>
           )}
 
+          {showLocalAddPicker && (
+            <ul className="network-subitem-list">
+              {availableLocalAirports.length === 0 && (
+                <li className="network-empty">Tous les aéroports sont déjà ajoutés</li>
+              )}
+              {availableLocalAirports.map(([key, airport]) => (
+                <li key={key}>
+                  <button
+                    className="network-subitem-btn"
+                    onClick={() => {
+                      onAddAirportToLocalNetwork(key);
+                      setShowLocalAddPicker(false);
+                    }}
+                  >
+                    {airport.iata ? `${airport.iata} — ${airport.name}` : airport.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
           <ul className="network-subitem-list">
-            {Object.keys(technicalPoints).length === 0 && (
-              <li className="network-empty">Aucun point technique</li>
+            {addedLocalAirports.length === 0 && (
+              <li className="network-empty">Aucun aéroport ajouté au réseau local</li>
             )}
-            {Object.entries(technicalPoints).map(([key, point]: [string, Airport]) => (
+            {addedLocalAirports.map(([key, airport]) => (
               <li key={key} className="network-subitem-row">
-                <span>{point.name}</span>
+                <button
+                  className="network-subitem-btn"
+                  style={{ flex: 1, textAlign: 'left' }}
+                  onClick={() => onSelectAirportForLocal(key)}
+                >
+                  {airport.iata ? `${airport.iata} — ${airport.name}` : airport.name}
+                </button>
                 {isAdmin && (
                   <button
                     className="icon-btn icon-btn--danger icon-btn--sm"
-                    title="Supprimer ce point"
-                    onClick={() => onDeleteTechnicalPoint(key)}
+                    title="Retirer de la liste (les informations locales sont conservées)"
+                    onClick={() => onRemoveAirportFromLocalNetwork(key)}
                   >
                     <Trash2 size={12} />
                   </button>

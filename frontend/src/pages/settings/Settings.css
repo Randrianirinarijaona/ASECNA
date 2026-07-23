@@ -1,0 +1,177 @@
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-card {
+  padding: 2rem !important;
+  border-radius: 14px !important;
+}
+
+.settings-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  margin-bottom: 1.25rem;
+}
+
+.card-title-iconic {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .theme-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-option:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+.theme-option--active {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.06);
+  color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.settings-submit-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.account-info dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.account-info dd {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-info dd.mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.settings-card--danger {
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  background: rgba(239, 68, 68, 0.01) !important;
+}
+
+.danger-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-danger);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.danger-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+@media (max-width: 560px) {
+  .danger-item {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 12px;
+  }
+}
+
+.danger-item-text {
+  flex: 1;
+}
+
+.danger-item-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.danger-item-desc {
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}

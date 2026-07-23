@@ -15,14 +15,14 @@ import { X, Trash2 } from 'lucide-react';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
-// @ts-ignore
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './NetworkModal.css';
 
 interface NetworkNodeModalProps {
   category: NetworkCategoryKey;
   subItem: string;
   mode: 'add' | 'remove';
-  airports: AirportsMap; // idéalement déjà filtré aux points techniques par le parent
+  airports: AirportsMap;
   onCreate: (category: NetworkCategoryKey, subItem: string, name: string, coords: [number, number]) => void;
   onDelete: (key: string) => void;
   onClose: () => void;
@@ -38,9 +38,6 @@ export default function NetworkNodeModal({
   onClose,
 }: NetworkNodeModalProps) {
   const [name, setName] = useState('');
-
-  // Coordonnées saisies directement ici, avec le centre de Madagascar comme
-  // valeur par défaut (cf. MapPage).
   const [lat, setLat] = useState('-18.9');
   const [lng, setLng] = useState('46.8');
 
@@ -75,29 +72,35 @@ export default function NetworkNodeModal({
 
         <div className="network-modal-body">
           {mode === 'add' ? (
-            <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <label>Nom de l'endroit</label>
-              <input
-                className="form-input"
-                placeholder="ex: Relais VHF Antsirabe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoFocus
-              />
+            <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+              <div className="form-group text-left">
+                <label className="form-label">Nom de l'endroit</label>
+                <input
+                  className="form-input"
+                  placeholder="ex: Relais VHF Antsirabe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                />
+              </div>
 
-              <label>Latitude</label>
-              <input className="form-input" value={lat} onChange={(e) => setLat(e.target.value)} />
+              <div className="form-group text-left">
+                <label className="form-label">Latitude</label>
+                <input className="form-input" value={lat} onChange={(e) => setLat(e.target.value)} />
+              </div>
 
-              <label>Longitude</label>
-              <input className="form-input" value={lng} onChange={(e) => setLng(e.target.value)} />
+              <div className="form-group text-left">
+                <label className="form-label">Longitude</label>
+                <input className="form-input" value={lng} onChange={(e) => setLng(e.target.value)} />
+              </div>
 
               <button
-                className="btn btn-primary btn-sm"
-                style={{ marginTop: 12 }}
+                className="btn btn-primary"
+                style={{ marginTop: 8, width: '100%' }}
                 disabled={!name.trim()}
                 onClick={handleCreate}
               >
-                Créer le point
+                Créer le point technique
               </button>
             </div>
           ) : (
@@ -105,11 +108,11 @@ export default function NetworkNodeModal({
               {matchingNodes.length === 0 && (
                 <p className="network-empty">Aucun point technique à supprimer pour ce sous-réseau</p>
               )}
-              <div className="network-item-grid">
+              <div className="network-item-grid" style={{ gridTemplateColumns: '1fr' }}>
                 {matchingNodes.map(([key, a]) => (
-                  <div key={key} className="network-item-card">
+                  <div key={key} className="network-item-card text-left">
                     <div className="network-item-card-top">
-                      <span className="network-item-title">{a.name}</span>
+                      <span className="network-item-title" style={{ fontWeight: 600 }}>{a.name}</span>
                       <button
                         className="icon-btn icon-btn--danger icon-btn--sm"
                         title="Supprimer ce point"

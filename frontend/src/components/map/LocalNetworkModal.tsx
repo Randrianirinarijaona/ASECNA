@@ -1,55 +1,54 @@
-// components/map/LinkDetailModal.tsx
+// components/map/LocalNetworkModal.tsx
+// Informations locales d'UN aéroport réel. Fonctionne exactement comme
+// LinkDetailModal (paramètres de liaison) : un paramètre = un nom + une
+// liste de valeurs nommées, sans notion de statut. Totalement indépendant
+// des liaisons (NetworkLink) et des sections réseau (sfa/sma/srna).
+
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
-import type { Airport } from '../../types';
-import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
-import type { NetworkLink } from '../../data/networkCategories';
+import type { Airport, Parameter } from '../../types';
 // @ts-ignore
 import './NetworkItemModal.css';
 
-interface LinkDetailModalProps {
-  link: NetworkLink;
-  fromAirport: Airport;
-  toAirport: Airport;
+interface LocalNetworkModalProps {
+  airport: Airport;
+  localParameters: Parameter[];
   isAdmin: boolean;
   onClose: () => void;
-  onAddParameter: (linkId: string, name: string) => void;
-  onDeleteParameter: (linkId: string, paramId: string) => void;
-  onAddValue: (linkId: string, paramId: string, name: string, text: string) => void;
-  onDeleteValue: (linkId: string, paramId: string, valueId: string) => void;
+  onAddParameter: (name: string) => void;
+  onDeleteParameter: (paramId: string) => void;
+  onAddValue: (paramId: string, name: string, text: string) => void;
+  onDeleteValue: (paramId: string, valueId: string) => void;
 }
 
-export default function LinkDetailModal({
-  link,
-  fromAirport,
-  toAirport,
+export default function LocalNetworkModal({
+  airport,
+  localParameters,
   isAdmin,
   onClose,
   onAddParameter,
   onDeleteParameter,
   onAddValue,
   onDeleteValue,
-}: LinkDetailModalProps) {
+}: LocalNetworkModalProps) {
   const [newParamName, setNewParamName] = useState('');
   const [showAddParam, setShowAddParam] = useState(false);
 
+  // Formulaire d'ajout de valeur ouvert pour au plus un paramètre à la fois.
   const [addingValueFor, setAddingValueFor] = useState<string | null>(null);
   const [newValueName, setNewValueName] = useState('');
   const [newValueText, setNewValueText] = useState('');
 
-  const parameters = link.parameters || [];
-  const linkColor = getNetworkLinkColor(link.category, link.itemTitle);
-
   const handleAddParameter = () => {
     if (!newParamName.trim()) return;
-    onAddParameter(link.id, newParamName.trim());
+    onAddParameter(newParamName.trim());
     setNewParamName('');
     setShowAddParam(false);
   };
 
   const handleAddValue = (paramId: string) => {
     if (!newValueName.trim() || !newValueText.trim()) return;
-    onAddValue(link.id, paramId, newValueName.trim(), newValueText.trim());
+    onAddValue(paramId, newValueName.trim(), newValueText.trim());
     setNewValueName('');
     setNewValueText('');
     setAddingValueFor(null);
@@ -61,21 +60,9 @@ export default function LinkDetailModal({
         <div className="network-modal-header">
           <div>
             <h2>
-              Liaison entre {fromAirport.name} et {toAirport.name}
+              {airport.name} {airport.iata && <span className="iata">({airport.iata})</span>}
             </h2>
-            <p className="network-modal-subtitle">
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  display: 'inline-block',
-                  background: linkColor,
-                  marginRight: 6,
-                }}
-              />
-              {NETWORK_CATEGORY_LABELS[link.category]} • {link.itemTitle}
-            </p>
+            <p className="network-modal-subtitle">Informations locales</p>
           </div>
           <div className="network-modal-header-actions">
             <button className="icon-btn" title="Fermer" onClick={onClose}>
@@ -87,7 +74,7 @@ export default function LinkDetailModal({
         <div className="network-modal-body">
           <div className="network-modal-category">
             <div className="network-modal-category-header">
-              <h3>Paramètres de la liaison</h3>
+              <h3>Paramètres locaux</h3>
               {isAdmin && (
                 <button
                   className="icon-btn"
@@ -99,11 +86,11 @@ export default function LinkDetailModal({
               )}
             </div>
 
-            {parameters.length === 0 && (
-              <p className="network-empty">Aucun paramètre configuré pour cette liaison</p>
+            {localParameters.length === 0 && (
+              <p className="network-empty">Aucune information locale configurée pour cet aéroport</p>
             )}
 
-            {parameters.map((param) => (
+            {localParameters.map((param) => (
               <div key={param.id} className="network-item-card" style={{ marginBottom: 10 }}>
                 <div className="network-item-card-top">
                   <span className="network-item-title">{param.name}</span>
@@ -111,7 +98,7 @@ export default function LinkDetailModal({
                     <button
                       className="icon-btn icon-btn--danger icon-btn--sm"
                       title="Supprimer ce paramètre"
-                      onClick={() => onDeleteParameter(link.id, param.id)}
+                      onClick={() => onDeleteParameter(param.id)}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -133,7 +120,7 @@ export default function LinkDetailModal({
                           <button
                             className="icon-btn icon-btn--danger icon-btn--sm"
                             title="Supprimer cette valeur"
-                            onClick={() => onDeleteValue(link.id, param.id, value.id)}
+                            onClick={() => onDeleteValue(param.id, value.id)}
                           >
                             <Trash2 size={13} />
                           </button>
@@ -149,7 +136,7 @@ export default function LinkDetailModal({
                       <div className="network-add-form" style={{ flexDirection: 'column', gap: 6 }}>
                         <input
                           className="form-input"
-                          placeholder="Nom de la valeur (ex: Adresse IP)"
+                          placeholder="Nom de la valeur (ex: Groupe électrogène)"
                           value={newValueName}
                           onChange={(e) => setNewValueName(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
@@ -157,7 +144,7 @@ export default function LinkDetailModal({
                         />
                         <input
                           className="form-input"
-                          placeholder="Valeur (ex: 10.2.0.5)"
+                          placeholder="Valeur (ex: Opérationnel, testé le 12/07)"
                           value={newValueText}
                           onChange={(e) => setNewValueText(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
@@ -188,7 +175,7 @@ export default function LinkDetailModal({
               <div className="network-add-form">
                 <input
                   className="form-input"
-                  placeholder="Nom du paramètre (ex: Réseau IP)"
+                  placeholder="Nom du paramètre (ex: Alimentation électrique)"
                   value={newParamName}
                   onChange={(e) => setNewParamName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddParameter()}

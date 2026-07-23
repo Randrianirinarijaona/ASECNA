@@ -11,14 +11,12 @@ export const AIRPORTS: Record<string, Airport> = {
             { 
                 title: "AMHS/RSFTA", 
                 description: "Système de messagerie AFTN/AMHS",
-                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"],
-                status: "maintenance"
+                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"]
             },
             { 
                 title: "SMT", 
                 description: "Système de Messagerie Terminale",
-                details: ["Version 2.3 installée"],
-                status: "operational"
+                details: ["Version 2.3 installée"]
             }
         ],
         sma: [
@@ -55,14 +53,12 @@ export const AIRPORTS: Record<string, Airport> = {
             { 
                 title: "AMHS/RSFTA", 
                 description: "Système de messagerie AFTN/AMHS",
-                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"],
-                status: "operational"
+                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"]
             },
             { 
                 title: "SMT", 
                 description: "Système de Messagerie Terminale",
-                details: ["Version 2.3 installée"],
-                status: "operational"
+                details: ["Version 2.3 installée"]
             }
         ],
         sma: [
@@ -99,14 +95,12 @@ export const AIRPORTS: Record<string, Airport> = {
             { 
                 title: "AMHS/RSFTA", 
                 description: "Système de messagerie AFTN/AMHS",
-                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"],
-                status: "operational"
+                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"]
             },
             { 
                 title: "SMT", 
                 description: "Système de Messagerie Terminale",
-                details: ["Version 2.3 installée"],
-                status: "operational"
+                details: ["Version 2.3 installée"]
             }
         ],
         sma: [
@@ -144,8 +138,7 @@ export const AIRPORTS: Record<string, Airport> = {
             { 
                 title: "AMHS/RSFTA", 
                 description: "Système de messagerie AFTN/AMHS",
-                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"],
-                status: "operational"
+                details: ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"]
             },
         ],
         sma: [

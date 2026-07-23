@@ -1,9 +1,9 @@
-//Profil.tsx
 import { useState } from 'react';
 import { User, Mail, Calendar, Shield, Save } from 'lucide-react';
 import { useAuth, useToast } from '../../hooks';
 import { userService } from '../../services/api.service';
 import { getInitials } from '../../utils/jwt';
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './Profile.css';
 
 export default function Profile() {
@@ -36,14 +36,13 @@ export default function Profile() {
       </div>
 
       <div className="profile-grid">
-        {/* Avatar card */}
         <div className="card profile-avatar-card">
           <div className="profile-avatar-large">
             {user?.avatarInitials}
           </div>
           <div className="profile-avatar-name">{user?.username}</div>
           <div className="profile-avatar-role">
-            <span className={`badge badge-${user?.role}`}>{user?.role}</span>
+            <span className={`badge-role badge-role--${user?.role}`}>{user?.role}</span>
           </div>
           <div className="profile-meta">
             <div className="profile-meta-item">
@@ -64,13 +63,12 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Edit form */}
         <div className="card profile-form-card">
           <h2 className="card-title">Personal information</h2>
-          <form onSubmit={handleSave}>
+          <form onSubmit={handleSave} className="profile-form">
             <div className="form-group">
               <label className="form-label">
-                <User size={13} /> Username
+                <User size={14} /> Username
               </label>
               <input
                 type="text"
@@ -83,7 +81,7 @@ export default function Profile() {
             </div>
             <div className="form-group">
               <label className="form-label">
-                <Mail size={13} /> Email address
+                <Mail size={14} /> Email address
               </label>
               <input
                 type="email"
@@ -95,25 +93,24 @@ export default function Profile() {
             </div>
             <div className="form-group">
               <label className="form-label">
-                <Shield size={13} /> Account role
+                <Shield size={14} /> Account role
               </label>
               <input
                 type="text"
-                className="form-input"
+                className="form-input form-input--disabled"
                 value={user?.role}
                 disabled
-                style={{ opacity: 0.6, cursor: 'not-allowed' }}
               />
-              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 4 }}>
+              <p className="form-help-text">
                 Contact an administrator to change your role
               </p>
             </div>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary profile-submit-btn"
               disabled={isSaving}
             >
-              <Save size={15} />
+              <Save size={16} />
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>
           </form>

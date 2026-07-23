@@ -1,148 +1,191 @@
 .network-modal-overlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 16px;
-  pointer-events: none;
-  z-index: 1000;
+  padding: 20px;
+  z-index: 1050;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
 }
 
 .network-modal {
-  pointer-events: auto;
   width: 100%;
   max-width: 720px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
-  border: 1px solid #e2e8f0;
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
+  background: var(--color-card);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .network-modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .network-modal-header h2 {
   margin: 0;
-  font-size: 17px;
-  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
 }
 
 .network-modal-header .iata {
   font-family: 'JetBrains Mono', Consolas, monospace;
-  color: #6366f1;
-  font-weight: 600;
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .network-modal-subtitle {
-  margin: 2px 0 0;
-  font-size: 12.5px;
-  color: #94a3b8;
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 .network-modal-header-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
+  align-items: center;
 }
 
 .icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: none;
-  background: #f1f5f9;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
   border-radius: 8px;
-  color: #475569;
+  color: var(--color-text);
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .icon-btn:hover {
-  background: #e2e8f0;
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.icon-btn--active {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
 }
 
 .icon-btn--danger {
-  color: #ef4444;
+  color: var(--color-danger);
+  border-color: transparent;
 }
 
 .icon-btn--danger:hover {
   background: rgba(239, 68, 68, 0.1);
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .icon-btn--sm {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
 }
 
 .network-modal-body {
-  padding: 16px 20px 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  max-height: 60vh;
+  gap: 20px;
+}
+
+.network-modal-body--scroll {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.network-modal-category {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .network-modal-category-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .network-modal-category-header h3 {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #6366f1;
+  color: var(--color-primary);
   font-family: 'JetBrains Mono', Consolas, monospace;
-}
-
-.network-empty {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0;
+  text-transform: uppercase;
 }
 
 .network-item-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .network-item-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.network-item-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: rgba(99, 102, 241, 0.2);
 }
 
 .network-item-card-top {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
 }
 
 .network-item-title {
   flex: 1;
-  font-size: 13.5px;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .network-item-desc {
-  font-size: 12px;
-  color: #64748b;
-  margin: 6px 0 8px;
+  font-size: 0.775rem;
+  color: var(--color-text-muted);
+  margin: 6px 0 0;
+  line-height: 1.4;
 }
 
 .status-dot {
@@ -152,151 +195,46 @@
   flex-shrink: 0;
 }
 
-.status-dot--operational {
-  background: #22c55e;
+.status-dot--operational, .status-operational {
+  background: var(--color-success);
 }
 
-.status-dot--maintenance {
-  background: #f59e0b;
+.status-dot--maintenance, .status-maintenance {
+  background: var(--color-warning);
 }
 
 .status-label {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
-  font-weight: 600;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 30px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .status-label--operational {
-  color: #16a34a;
+  color: var(--color-success);
+  background: rgba(34, 197, 94, 0.1);
 }
 
 .status-label--maintenance {
-  color: #d97706;
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.1);
 }
 
 .network-add-form {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .network-add-form .form-input {
   flex: 1;
 }
 
-/* ─── Carte item : ajustements pour accueillir le footer + badge ────────── */
-
-.network-item-card {
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.network-item-card--expanded {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
-}
-
-.network-item-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 8px;
-  gap: 8px;
-}
-
-/* ─── Badge de liaisons (compteur cliquable) ─────────────────────────────── */
-
-.link-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #4f46e5;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  border-radius: 999px;
-  padding: 2px 8px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.link-badge:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.16);
-}
-
-.link-badge--empty {
-  color: #94a3b8;
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  cursor: default;
-}
-
-.link-badge-chevron {
-  transition: transform 0.15s ease;
-}
-
-.link-badge-chevron--open {
-  transform: rotate(180deg);
-}
-
-/* ─── Panneau détaillé des liaisons (déplié dans la carte) ───────────────── */
-
-.network-links-panel {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.network-link-entry {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
-}
-
-.network-link-entry:hover {
-  background: #f8fafc;
-}
-
-.network-link-entry-info {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.network-link-entry-iata {
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #6366f1;
-  background: rgba(99, 102, 241, 0.08);
-  border-radius: 4px;
-  padding: 1px 5px;
-  flex-shrink: 0;
-}
-
-.network-link-entry-name {
-  font-size: 12px;
-  color: #334155;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.network-links-title { font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
-.network-link-row { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 0; }
-.network-link-row span { flex: 1; }
-
-.network-modal-body--scroll {
-  max-height: 60vh; /* ajuste selon la hauteur réelle de ton modal */
-  overflow-y: auto;
+.text-left {
+  text-align: left;
 }

@@ -1,4 +1,3 @@
-//admin.tsx
 import { useCallback, useState } from 'react';
 import {
   Users, ShieldCheck, UserCheck, Activity,
@@ -10,7 +9,7 @@ import { useApi, useMutation } from '../../hooks/useApi';
 import { Table, type Column } from '../../components/ui/Table';
 import { ConfirmModal, Modal } from '../../components/ui/Modal';
 import type { User, Role } from '../../types';
-// @ts-ignore: CSS module declaration not available in this project setup
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './Admin.css';
 
 function StatCard({ label, value, icon, color }: {
@@ -35,25 +34,22 @@ export default function Admin() {
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [editRole, setEditRole] = useState<Role>('user');
 
-  // Fetch stats
   const statsFetcher = useCallback(() => adminService.getStats(), []);
   const { data: stats } = useApi(statsFetcher);
 
-  // Fetch users
   const usersFetcher = useCallback(
     () => userService.getAll(page, 10, search),
     [page, search]
   );
   const { data: usersData, isLoading, error, refetch } = useApi(usersFetcher, [page, search]);
 
-  // Mutations
   const { execute: deleteUser, isLoading: deleting } = useMutation(userService.delete);
   const { execute: toggleActive } = useMutation(({ id, isActive }: { id: string; isActive: boolean }) =>
     userService.toggleActive(id, isActive)
   );
   const { execute: changeRole } = useMutation(({ id, role }: { id: string; role: Role }) =>
-  userService.changeRole(id, role)
-);
+    userService.changeRole(id, role)
+  );
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -82,8 +78,6 @@ export default function Admin() {
     refetch();
   };
 
-  
-
   const columns: Column<User>[] = [
     {
       key: 'user',
@@ -103,7 +97,7 @@ export default function Admin() {
       header: 'Role',
       width: '120px',
       render: (u) => (
-        <span className={`badge badge-${u.role}`}>{u.role}</span>
+        <span className={`badge-role badge-role--${u.role}`}>{u.role}</span>
       ),
     },
     {
@@ -111,7 +105,7 @@ export default function Admin() {
       header: 'Status',
       width: '100px',
       render: (u) => (
-        <span className={`badge badge-${u.isActive ? 'active' : 'inactive'}`}>
+        <span className={`badge-status badge-status--${u.isActive ? 'active' : 'inactive'}`}>
           {u.isActive ? 'Active' : 'Inactive'}
         </span>
       ),
@@ -167,22 +161,20 @@ export default function Admin() {
         <p className="page-subtitle">Manage users, permissions and system settings</p>
       </div>
 
-      {/* Stats */}
       {stats && (
         <div className="admin-stats">
           <StatCard label="Total users" value={stats.totalUsers}
-            icon={<Users size={20} />} color="rgba(99,102,241,0.15)" />
+            icon={<Users size={20} />} color="rgba(99,102,241,0.12)" />
           <StatCard label="Active users" value={stats.activeUsers}
-            icon={<UserCheck size={20} />} color="rgba(34,197,94,0.15)" />
+            icon={<UserCheck size={20} />} color="rgba(34,197,94,0.12)" />
           <StatCard label="Admins" value={stats.adminCount}
-            icon={<ShieldCheck size={20} />} color="rgba(245,158,11,0.15)" />
+            icon={<ShieldCheck size={20} />} color="rgba(245,158,11,0.12)" />
           <StatCard label="Recent logins" value={stats.recentLogins}
-            icon={<Activity size={20} />} color="rgba(96,165,250,0.15)" />
+            icon={<Activity size={20} />} color="rgba(96,165,250,0.12)" />
         </div>
       )}
 
-      {/* User management */}
-      <div className="card">
+      <div className="card admin-card">
         <div className="card-toolbar">
           <h2 className="card-title" style={{ marginBottom: 0 }}>User management</h2>
           <div className="toolbar-search">
@@ -197,20 +189,21 @@ export default function Admin() {
           </div>
         </div>
 
-        <Table
-          columns={columns}
-          data={usersData?.items || []}
-          isLoading={isLoading}
-          error={error}
-          emptyMessage="No users found"
-          total={usersData?.total}
-          page={page}
-          pageSize={10}
-          onPageChange={setPage}
-        />
+        <div className="table-responsive">
+          <Table
+            columns={columns}
+            data={usersData?.items || []}
+            isLoading={isLoading}
+            error={error}
+            emptyMessage="No users found"
+            total={usersData?.total}
+            page={page}
+            pageSize={10}
+            onPageChange={setPage}
+          />
+        </div>
       </div>
 
-      {/* Delete confirmation */}
       <ConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -221,7 +214,6 @@ export default function Admin() {
         isLoading={deleting}
       />
 
-      {/* Edit role modal */}
       <Modal
         isOpen={!!editTarget}
         onClose={() => setEditTarget(null)}
@@ -234,18 +226,18 @@ export default function Admin() {
           </div>
         }
       >
-      <div className="role-selector">
-        {(['user', 'technicien', 'admin'] as const).map((r) => (
-          <button
-            key={r}
-            className={`role-option ${editRole === r ? 'role-option--active' : ''}`}
-            onClick={() => setEditRole(r)}
+        <div className="role-selector">
+          {(['user', 'technicien', 'admin'] as const).map((r) => (
+            <button
+              key={r}
+              className={`role-option ${editRole === r ? 'role-option--active' : ''}`}
+              onClick={() => setEditRole(r)}
             >
-            {r === 'admin' ? <ShieldCheck size={16} /> : <Users size={16} />}
-            <span className="role-option-label">{r}</span>
-          </button>
-        ))}
-      </div>
+              {r === 'admin' ? <ShieldCheck size={18} /> : <Users size={18} />}
+              <span className="role-option-label">{r}</span>
+            </button>
+          ))}
+        </div>
       </Modal>
     </div>
   );

@@ -1,4 +1,3 @@
-//NetworkItemModal.tsx
 import { useState } from 'react';
 import {
   X,
@@ -10,21 +9,21 @@ import {
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
-import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
+import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 import type { NetworkSubParameter } from '../../types';
-// @ts-ignore
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './NetworkItemModal.css';
 
 interface NetworkItemModalProps {
   itemTitle: string;
   itemStatus: 'operational' | 'maintenance';
   itemDescription?: string;
-  // données réelles, persistées via useAirportsData (plus de state local factice)
   subParameters: NetworkSubParameter[];
   airportName: string;
   isAdmin: boolean;
+  hideStatus?: boolean;
   onClose: () => void;
   onUpdateItem?: (
     newTitle: string,
@@ -34,7 +33,6 @@ interface NetworkItemModalProps {
   onAddSubParameter?: (title: string, value: string) => void;
   onDeleteSubParameter?: (subId: string) => void;
   onToggleSubParameterStatus?: (subId: string) => void;
-
   category?: NetworkCategoryKey;
   airportKey?: string;
   links?: NetworkLink[];
@@ -51,6 +49,7 @@ export default function NetworkItemModal({
   subParameters,
   airportName,
   isAdmin,
+  hideStatus = false,
   onClose,
   onUpdateItem,
   onAddSubParameter,
@@ -94,19 +93,21 @@ export default function NetworkItemModal({
     setShowAddSub(false);
   };
 
-  // La section "Aéroports liés" ne concerne que les réseaux de type liaison
-  // point-à-point (SFA : AMHS, SMT...). Pour SMA (VHF, HF), cette section
-  // est volontairement absente : ces réseaux ne fonctionnent pas par
-  // liaisons entre deux aéroports précis dans ce module.
   const hasLinkContext =
     Boolean(category && category !== 'sma' && airportKey && links && allAirports);
+
+  const matchesItem = (linkItemTitle: string) => {
+    const a = linkItemTitle.toLowerCase();
+    const b = itemTitle.toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  };
 
   const linkedAirports = hasLinkContext
     ? links!
         .filter(
           (l) =>
             l.category === category &&
-            l.itemTitle === itemTitle &&
+            matchesItem(l.itemTitle) &&
             (l.fromAirportKey === airportKey || l.toAirportKey === airportKey)
         )
         .map((l) => {
@@ -120,6 +121,8 @@ export default function NetworkItemModal({
           };
         })
     : [];
+
+  const linkColor = category ? getNetworkLinkColor(category, itemTitle) : undefined;
 
   return (
     <div className="network-modal-overlay">
@@ -136,19 +139,21 @@ export default function NetworkItemModal({
             {isAdmin && (
               <>
                 <button
-                  className="icon-btn"
+                  className={`icon-btn ${editing ? 'icon-btn--active' : ''}`}
                   title="Modifier"
                   onClick={() => setEditing(!editing)}
                 >
                   <Edit2 size={16} />
                 </button>
-                <button
-                  className={`icon-btn ${editStatus === 'operational' ? 'status-operational' : 'status-maintenance'}`}
-                  title="Changer statut global"
-                  onClick={toggleGlobalStatus}
-                >
-                  {editStatus === 'operational' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-                </button>
+                {!hideStatus && (
+                  <button
+                    className={`icon-btn ${editStatus === 'operational' ? 'status-operational' : 'status-maintenance'}`}
+                    title="Changer statut global"
+                    onClick={toggleGlobalStatus}
+                  >
+                    {editStatus === 'operational' ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                  </button>
+                )}
               </>
             )}
             <button className="icon-btn" title="Fermer" onClick={onClose}>
@@ -160,7 +165,7 @@ export default function NetworkItemModal({
         <div className="network-modal-body">
           <div className="network-item-detail">
             <div className="network-item-card-top">
-              <span className={`status-dot status-dot--${editStatus}`} />
+              {!hideStatus && <span className={`status-dot status-dot--${editStatus}`} />}
               {editing ? (
                 <input
                   className="form-input"
@@ -168,7 +173,7 @@ export default function NetworkItemModal({
                   onChange={e => setEditTitle(e.target.value)}
                 />
               ) : (
-                <span className="network-item-title">{itemTitle}</span>
+                <span className="network-item-title-large">{itemTitle}</span>
               )}
             </div>
 
@@ -179,28 +184,33 @@ export default function NetworkItemModal({
                 value={editDesc}
                 onChange={e => setEditDesc(e.target.value)}
                 rows={3}
+                style={{ marginTop: '10px', marginBottom: '10px' }}
               />
             ) : (
-              itemDescription && <p className="network-item-desc">{itemDescription}</p>
+              itemDescription && <p className="network-item-desc-main">{itemDescription}</p>
             )}
 
-            <span className={`status-label status-label--${editStatus}`}>
-              {editStatus === 'maintenance' ? (
-                <>
-                  <AlertTriangle size={12} /> En Maintenance
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={12} /> Opérationnel
-                </>
+            <div className="network-detail-footer">
+              {!hideStatus && (
+                <span className={`status-label status-label--${editStatus}`}>
+                  {editStatus === 'maintenance' ? (
+                    <>
+                      <AlertTriangle size={13} /> En Maintenance
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={13} /> Opérationnel
+                    </>
+                  )}
+                </span>
               )}
-            </span>
 
-            {editing && (
-              <button className="btn btn-primary btn-sm" onClick={handleSaveItem}>
-                Enregistrer les modifications
-              </button>
-            )}
+              {editing && (
+                <button className="btn btn-primary btn-sm" onClick={handleSaveItem}>
+                  Enregistrer
+                </button>
+              )}
+            </div>
           </div>
 
           {hasLinkContext && (
@@ -209,7 +219,7 @@ export default function NetworkItemModal({
                 <h3>Aéroports liés</h3>
                 {isAdmin && onStartLink && (
                   <button
-                    className="icon-btn"
+                    className="icon-btn icon-btn--sm"
                     title="Créer une nouvelle liaison"
                     onClick={onStartLink}
                   >
@@ -226,14 +236,24 @@ export default function NetworkItemModal({
                 {linkedAirports.map((linked) => (
                   <div
                     key={linked.linkId}
-                    className="network-item-card"
-                    style={{ cursor: onOpenLinkDetail ? 'pointer' : 'default' }}
-                    title="Voir les paramètres de cette liaison"
+                    className="network-item-card network-item-card--interactive"
                     onClick={() => onOpenLinkDetail?.(linked.linkId)}
                   >
                     <div className="network-item-card-top">
+                      {linkColor && (
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                            background: linkColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
                       <span className="network-item-title">
-                        {linked.iata} — {linked.name}
+                        <strong style={{ color: 'var(--color-primary)' }}>{linked.iata}</strong> — {linked.name}
                       </span>
 
                       {isAdmin && onDeleteLink && (
@@ -259,7 +279,7 @@ export default function NetworkItemModal({
             <div className="network-modal-category-header">
               <h3>Sous-paramètres / Configuration détaillée</h3>
               {isAdmin && (
-                <button className="icon-btn" onClick={() => setShowAddSub(!showAddSub)}>
+                <button className="icon-btn icon-btn--sm" onClick={() => setShowAddSub(!showAddSub)}>
                   <Plus size={14} />
                 </button>
               )}
@@ -273,49 +293,55 @@ export default function NetworkItemModal({
               {subParameters.map(sub => (
                 <div key={sub.id} className="network-item-card sub-parameter-card">
                   <div className="network-item-card-top">
-                    <span className={`status-dot status-dot--${sub.status}`} />
+                    {!hideStatus && <span className={`status-dot status-dot--${sub.status}`} />}
                     <span className="network-item-title">{sub.title}</span>
                     {isAdmin && (
-                      <>
-                        <button
-                          className="icon-btn icon-btn--sm"
-                          onClick={() => onToggleSubParameterStatus?.(sub.id)}
-                          title="Changer statut"
-                        >
-                          {sub.status === 'operational' ? 'M' : 'O'}
-                        </button>
+                      <div className="network-card-actions">
+                        {!hideStatus && (
+                          <button
+                            className="btn-text-action"
+                            onClick={() => onToggleSubParameterStatus?.(sub.id)}
+                            title="Changer statut"
+                          >
+                            {sub.status === 'operational' ? 'Maintenance' : 'Opérationnel'}
+                          </button>
+                        )}
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
                           onClick={() => onDeleteSubParameter?.(sub.id)}
                         >
                           <Trash2 size={13} />
                         </button>
-                      </>
+                      </div>
                     )}
                   </div>
-                  <p className="network-item-desc"><strong>Valeur :</strong> {sub.value}</p>
+                  <p className="network-sub-val"><strong>Valeur :</strong> {sub.value}</p>
                   {sub.description && <p className="network-item-desc">{sub.description}</p>}
                 </div>
               ))}
             </div>
 
             {showAddSub && (
-              <div className="network-add-form">
-                <input
-                  className="form-input"
-                  placeholder="Nom du sous-paramètre"
-                  value={newSubTitle}
-                  onChange={e => setNewSubTitle(e.target.value)}
-                />
-                <input
-                  className="form-input"
-                  placeholder="Valeur (ex: 123.450 MHz)"
-                  value={newSubValue}
-                  onChange={e => setNewSubValue(e.target.value)}
-                />
-                <button className="btn btn-primary btn-sm" onClick={addSubParameter}>
-                  Ajouter
-                </button>
+              <div className="network-add-form-panel">
+                <h4>Nouveau sous-paramètre</h4>
+                <div className="network-add-form-grid">
+                  <input
+                    className="form-input"
+                    placeholder="Nom (ex: Fréquence)"
+                    value={newSubTitle}
+                    onChange={e => setNewSubTitle(e.target.value)}
+                  />
+                  <input
+                    className="form-input"
+                    placeholder="Valeur (ex: 123.450 MHz)"
+                    value={newSubValue}
+                    onChange={e => setNewSubValue(e.target.value)}
+                  />
+                </div>
+                <div className="network-add-form-actions">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowAddSub(false)}>Annuler</button>
+                  <button className="btn btn-primary btn-sm" onClick={addSubParameter}>Ajouter</button>
+                </div>
               </div>
             )}
           </div>

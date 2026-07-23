@@ -10,6 +10,12 @@ export function useAirportsData() {
   const [airports, setAirports] = useState<AirportsMap>(INITIAL_AIRPORTS);
   const [links, setLinks] = useState<NetworkLink[]>([]);
 
+  // Liste des aéroports affichés dans la section "Réseau local" de la
+  // sidebar. Un aéroport n'y apparaît que s'il a été explicitement ajouté
+  // (bouton "Ajouter un aéroport"), pour ne pas polluer la liste avec des
+  // aéroports sans aucune information locale.
+  const [localNetworkAirportKeys, setLocalNetworkAirportKeys] = useState<string[]>([]);
+
   const addAirport = useCallback((key: string, airport: Airport) => {
     setAirports((prev) => ({ ...prev, [key]: airport }));
   }, []);
@@ -23,6 +29,7 @@ export function useAirportsData() {
     setLinks((prev) =>
       prev.filter((l) => l.fromAirportKey !== key && l.toAirportKey !== key)
     );
+    setLocalNetworkAirportKeys((prev) => prev.filter((k) => k !== key));
   }, []);
 
   const addNetworkItem = useCallback(
@@ -73,6 +80,9 @@ export function useAirportsData() {
     []
   );
 
+  // Reste utilisé pour SMA/SRNA uniquement (les items SFA n'ont plus de
+  // statut global, cf. NetworkModal — cette fonction n'est simplement plus
+  // appelée pour la catégorie 'sfa').
   const updateNetworkItemStatus = useCallback(
     (
       airportKey: string,
@@ -87,14 +97,13 @@ export function useAirportsData() {
         const updated = items.map((i) => (i.title === itemTitle ? { ...i, status } : i));
         return {
           ...prev,
-          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } } as unknown as Airport,
         };
       });
     },
     []
   );
 
-  // nouveau : persiste la description d'un item réseau
   const updateNetworkItemDescription = useCallback(
     (
       airportKey: string,
@@ -109,7 +118,7 @@ export function useAirportsData() {
         const updated = items.map((i) => (i.title === itemTitle ? { ...i, description } : i));
         return {
           ...prev,
-          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } } as unknown as Airport,
         };
       });
     },
@@ -239,10 +248,10 @@ export function useAirportsData() {
     []
   );
 
-  // ─── Sous-paramètres d'un item réseau (nouveau) ─────────────────────────
-  // Réutilise exactement le même pattern CRUD que les paramètres de liaison,
-  // mais rattaché à un AirportSectionItem (identifié par airportKey +
-  // category + itemTitle) plutôt qu'à un NetworkLink.
+  // ─── Sous-paramètres d'un item réseau ───────────────────────────────────
+  // Inchangé : reste disponible pour toutes les catégories. Le statut de
+  // chaque sous-paramètre (ex: statut d'une fréquence précise) est distinct
+  // du statut global de l'item, seul concerné par le point 3.
 
   const addItemSubParameter = useCallback(
     (
@@ -314,7 +323,7 @@ export function useAirportsData() {
                 ...i,
                 subParameters: (i.subParameters || []).map((s) =>
                   s.id === subId
-                    ? { ...s, status: s.status === 'operational' ? 'maintenance' : 'operational' }
+                    ? { ...s, status: s.status === 'operational' ? ('maintenance' as const) : ('operational' as const) }
                     : s
                 ),
               }
@@ -322,12 +331,16 @@ export function useAirportsData() {
         );
         return {
           ...prev,
-          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } },
+          [airportKey]: { ...airport, sections: { ...airport.sections, [category]: updated } } as unknown as Airport,
         };
       });
     },
     []
   );
+
+  // ─── Points techniques réseau (relais VHF/HF, antennes SRNA...) ────────
+  // Utilisé UNIQUEMENT par NetworkNodeModal (catégories SMA/SRNA), sans
+  // aucun lien avec le module "Réseau local".
 
   const addTechnicalPoint = useCallback(
     (category: NetworkCategoryKey, subItem: string, name: string, coords: [number, number]) => {
@@ -345,6 +358,102 @@ export function useAirportsData() {
     [addAirport]
   );
 
+  // ─── Réseau local : gestion de la liste d'aéroports affichés ───────────
+
+  const addAirportToLocalNetwork = useCallback((airportKey: string) => {
+    setLocalNetworkAirportKeys((prev) => (prev.includes(airportKey) ? prev : [...prev, airportKey]));
+  }, []);
+
+  const removeAirportFromLocalNetwork = useCallback((airportKey: string) => {
+    setLocalNetworkAirportKeys((prev) => prev.filter((k) => k !== airportKey));
+  }, []);
+
+  // ─── Informations locales d'un aéroport ─────────────────────────────────
+  // Même pattern CRUD que les paramètres de liaison (addLinkParameter /
+  // addLinkParameterValue...), appliqué à Airport.localParameters plutôt
+  // qu'à un NetworkLink. Pas de notion de statut.
+
+  const addAirportLocalParameter = useCallback((airportKey: string, name: string) => {
+    if (!name.trim()) return;
+    setAirports((prev) => {
+      const airport = prev[airportKey];
+      if (!airport) return prev;
+      return {
+        ...prev,
+        [airportKey]: {
+          ...airport,
+          localParameters: [
+            ...(airport.localParameters || []),
+            { id: `local-param-${Date.now()}`, name: name.trim(), values: [] },
+          ],
+        },
+      };
+    });
+  }, []);
+
+  const deleteAirportLocalParameter = useCallback((airportKey: string, paramId: string) => {
+    setAirports((prev) => {
+      const airport = prev[airportKey];
+      if (!airport) return prev;
+      return {
+        ...prev,
+        [airportKey]: {
+          ...airport,
+          localParameters: (airport.localParameters || []).filter((p) => p.id !== paramId),
+        },
+      };
+    });
+  }, []);
+
+  const addAirportLocalParameterValue = useCallback(
+    (airportKey: string, paramId: string, name: string, text: string) => {
+      if (!name.trim() || !text.trim()) return;
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        return {
+          ...prev,
+          [airportKey]: {
+            ...airport,
+            localParameters: (airport.localParameters || []).map((p) =>
+              p.id === paramId
+                ? {
+                    ...p,
+                    values: [
+                      ...p.values,
+                      { id: `local-val-${Date.now()}`, name: name.trim(), text: text.trim() },
+                    ],
+                  }
+                : p
+            ),
+          },
+        };
+      });
+    },
+    []
+  );
+
+  const deleteAirportLocalParameterValue = useCallback(
+    (airportKey: string, paramId: string, valueId: string) => {
+      setAirports((prev) => {
+        const airport = prev[airportKey];
+        if (!airport) return prev;
+        return {
+          ...prev,
+          [airportKey]: {
+            ...airport,
+            localParameters: (airport.localParameters || []).map((p) =>
+              p.id === paramId
+                ? { ...p, values: p.values.filter((v) => v.id !== valueId) }
+                : p
+            ),
+          },
+        };
+      });
+    },
+    []
+  );
+
   return {
     airports,
     links,
@@ -354,7 +463,7 @@ export function useAirportsData() {
     addNetworkItem,
     deleteNetworkItem,
     updateNetworkItemStatus,
-    updateNetworkItemDescription, // nouveau
+    updateNetworkItemDescription,
     addNetworkLink,
     deleteNetworkLink,
     getLinksForAirport,
@@ -362,9 +471,16 @@ export function useAirportsData() {
     deleteLinkParameter,
     addLinkParameterValue,
     deleteLinkParameterValue,
-    // nouveau : sous-paramètres persistés par item réseau
     addItemSubParameter,
     deleteItemSubParameter,
     toggleItemSubParameterStatus,
+    // Réseau local : liste d'aéroports suivis + CRUD des paramètres
+    localNetworkAirportKeys,
+    addAirportToLocalNetwork,
+    removeAirportFromLocalNetwork,
+    addAirportLocalParameter,
+    deleteAirportLocalParameter,
+    addAirportLocalParameterValue,
+    deleteAirportLocalParameterValue,
   };
 }

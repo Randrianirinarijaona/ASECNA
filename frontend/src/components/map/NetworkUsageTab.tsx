@@ -1,9 +1,9 @@
-//NetorkUsageTab.tsx
 import { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
 import type { NetworkCategoryKey, AirportNetworkMatch } from '../../data/networkCategories';
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './NetworkUsageTab.css';
 
 interface NetworkUsageTabProps {
@@ -56,7 +56,7 @@ export default function NetworkUsageTab({
 
       {showAddPicker && (
         <div className="network-usage-add-picker">
-          {availableToAdd.length === 0 && <p>Tous les aéroports utilisent déjà ce réseau.</p>}
+          {availableToAdd.length === 0 && <p className="network-empty">Tous les aéroports utilisent déjà ce réseau.</p>}
           {availableToAdd.map(([key, airport]) => (
             <button
               key={key}
@@ -81,12 +81,11 @@ export default function NetworkUsageTab({
             <button className="network-usage-item-main" onClick={() => onSelectAirport(key)}>
               <span className={`status-dot status-dot--${status || 'operational'}`} />
               <span className="network-usage-item-name">
-                {airport.name} ({airport.iata})
+                {airport.name} <span className="network-usage-item-iata">({airport.iata})</span>
               </span>
               <span className="network-usage-item-matched">{matchedTitle}</span>
             </button>
             {isAdmin && (
-              
               <button
                 className="icon-btn icon-btn--danger icon-btn--sm"
                 title="Retirer cet aéroport"

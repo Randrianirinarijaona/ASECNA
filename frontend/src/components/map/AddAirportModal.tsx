@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Airport } from '../../types';
+// @ts-ignore
 import './AddAirportModal.css';
 
 interface AddAirportModalProps {

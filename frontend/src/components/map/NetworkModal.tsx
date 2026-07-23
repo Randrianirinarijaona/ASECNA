@@ -1,19 +1,17 @@
-//NetworkModal.tsx
 import { useState, useMemo } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import type { Airport } from '../../types';
-import { NETWORK_CATEGORY_LABELS } from '../../data/networkCategories';
+import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 
 import NetworkItemModal from './NetworkItemModal';
-
-// @ts-ignore
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './NetworkModal.css';
 
 interface NetworkItemInput {
   title: string;
-  status: 'operational' | 'maintenance' | 'planned';
+  status?: 'operational' | 'maintenance' | 'planned';
 }
 
 interface NetworkModalProps {
@@ -57,7 +55,6 @@ interface NetworkModalProps {
     itemTitle: string,
     subId: string
   ) => void;
-
   onStartLink: (category: NetworkCategoryKey, itemTitle: string) => void;
   onDeleteLink: (linkId: string) => void;
   onOpenLinkDetail: (linkId: string) => void;
@@ -87,9 +84,6 @@ export default function NetworkModal({
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
-  // On ne garde que la clé de l'item ouvert ; les données affichées sont
-  // recalculées à chaque rendu depuis `airport`, donc toujours à jour
-  // (statut, description, sous-paramètres...).
   const [selectedItemKey, setSelectedItemKey] = useState<{
     category: NetworkCategoryKey;
     title: string;
@@ -104,7 +98,11 @@ export default function NetworkModal({
 
   const handleAddSubmit = (category: NetworkCategoryKey) => {
     if (!newTitle.trim()) return;
-    onAddItem(category, { title: newTitle.trim(), status: 'operational' });
+    const item: NetworkItemInput =
+      category === 'sfa'
+        ? { title: newTitle.trim() }
+        : { title: newTitle.trim(), status: 'operational' };
+    onAddItem(category, item);
     setNewTitle('');
     setAddingTo(null);
   };
@@ -145,7 +143,7 @@ export default function NetworkModal({
                   <h3>{NETWORK_CATEGORY_LABELS[category]}</h3>
                   {isAdmin && (
                     <button
-                      className="icon-btn"
+                      className="icon-btn icon-btn--sm"
                       title="Ajouter un paramètre"
                       onClick={() => setAddingTo(addingTo === category ? null : category)}
                     >
@@ -160,12 +158,27 @@ export default function NetworkModal({
 
                 <div className="network-item-grid">
                   {items.map((item) => (
-                    <div key={item.title} className="network-item-card">
+                    <div key={item.title} className="network-item-card text-left">
                       <div
                         className="network-item-card-top"
                         style={{ cursor: 'pointer' }}
                         onClick={() => setSelectedItemKey({ category, title: item.title })}
                       >
+                        {category === 'sfa' ? (
+                          <span
+                            title="Couleur de liaison associée"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              display: 'inline-block',
+                              background: getNetworkLinkColor('sfa', item.title),
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <span className={`status-dot status-dot--${item.status || 'operational'}`} />
+                        )}
                         <span className="network-item-title">{item.title}</span>
 
                         {isAdmin && (
@@ -219,19 +232,14 @@ export default function NetworkModal({
             links={links}
             allAirports={allAirports}
             isAdmin={isAdmin}
+            hideStatus={selectedItem.category === 'sfa'}
             onClose={() => setSelectedItemKey(null)}
             onUpdateItem={(newTitle, newStatus, newDesc) => {
-              onUpdateItemStatus(airportKey, selectedItem.category, selectedItem.title, newStatus);
+              if (selectedItem.category !== 'sfa') {
+                onUpdateItemStatus(airportKey, selectedItem.category, selectedItem.title, newStatus);
+              }
               if ((newDesc || '') !== (selectedItem.description || '')) {
                 onUpdateItemDescription(airportKey, selectedItem.category, selectedItem.title, newDesc || '');
-              }
-              // Le renommage du titre n'est volontairement pas persisté : le
-              // titre sert de clé de correspondance pour les liaisons
-              // existantes (NetworkLink.itemTitle). Le permettre nécessite
-              // de propager le renommage à toutes les liaisons concernées —
-              // à valider séparément si tu en as besoin.
-              if (newTitle !== selectedItem.title) {
-                console.info('Renommage non persisté (casserait les liaisons existantes) :', newTitle);
               }
             }}
             onAddSubParameter={(title, value) =>
