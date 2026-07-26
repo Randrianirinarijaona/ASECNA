@@ -1,4 +1,11 @@
 //AuthContext.tsx
+//
+// MODIFIÉ : remplace le mock (MOCK_USERS, mot de passe unique '123456',
+// jeton 'mock-jwt-token-<timestamp>') par un vrai appel à authService,
+// qui parle au backend FastAPI (JWT signé, bcrypt). La forme de l'état
+// (AuthState), les noms de fonctions exposées (login/register/logout/
+// updateUser) et le comportement général sont INCHANGÉS pour ne rien
+// casser dans AppLayout.tsx, RouteGuards.tsx, Login.tsx, Profile.tsx, etc.
 import React, { createContext, useCallback, useEffect, useReducer } from 'react';
 import type { AuthState, LoginPayload, RegisterPayload, User } from '../types';
 import {
@@ -8,45 +15,8 @@ import {
   removeToken,
   saveToken,
   saveUser,
-  getInitials,
 } from '../utils/jwt';
-
-// ─── Mock Users for Demo ─────────────────────────────────────────────────────
-
-const MOCK_USERS: Record<string, User> = {
-  'admin': {
-    id: '1',
-    username: 'admin',
-    email: 'admin@asecna.mg',
-    role: 'admin',
-    isActive: true,
-    createdAt: '2025-01-15T08:00:00Z',
-    lastLogin: new Date().toISOString(),
-    avatarInitials: 'AD',
-  },
-  // Anciennement role: 'client' -> renommé 'technicien' (mêmes permissions qu'avant)
-  'user': {
-    id: '2',
-    username: 'user',
-    email: 'user@asecna.mg',
-    role: 'technicien',
-    isActive: true,
-    createdAt: '2025-02-10T10:30:00Z',
-    lastLogin: new Date().toISOString(),
-    avatarInitials: 'US',
-  },
-  // Nouveau rôle 'user' : visualisation stricte uniquement
-  'viewer': {
-    id: '3',
-    username: 'viewer',
-    email: 'viewer@asecna.mg',
-    role: 'user',
-    isActive: true,
-    createdAt: '2025-03-01T09:00:00Z',
-    lastLogin: new Date().toISOString(),
-    avatarInitials: 'VW',
-  },
-};
+import { authService } from '../services/api.service';
 
 // ─── Reducer & Context (inchangé) ───────────────────────────────────────────
 
@@ -98,46 +68,48 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Rehydrate
+  // Rehydrate : vérifie le token stocké auprès du backend (GET /auth/me)
+  // plutôt que de faire confiance à la copie locale de l'utilisateur, pour
+  // détecter un compte désactivé/supprimé entre-temps.
   useEffect(() => {
-    const token = getToken();
-    const user = getStoredUser();
+    const rehydrate = async () => {
+      const token = getToken();
+      const storedUser = getStoredUser();
 
-    if (token && user && !isTokenExpired(token)) {
-      dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
-    } else {
-      removeToken();
-      dispatch({ type: 'AUTH_FAILURE' });
-    }
+      if (!token || !storedUser || isTokenExpired(token)) {
+        removeToken();
+        dispatch({ type: 'AUTH_FAILURE' });
+        return;
+      }
+
+      try {
+        const freshUser = await authService.me();
+        saveUser(freshUser);
+        dispatch({ type: 'AUTH_SUCCESS', payload: { user: freshUser, token } });
+      } catch {
+        removeToken();
+        dispatch({ type: 'AUTH_FAILURE' });
+      }
+    };
+
+    rehydrate();
   }, []);
 
   const login = useCallback(async (payload: LoginPayload) => {
     dispatch({ type: 'AUTH_START' });
-
-    // Mock login
-    const mockUser = MOCK_USERS[payload.username.toLowerCase()];
-
-    if (!mockUser || payload.password !== '123456') {
-      throw new Error(
-        'Identifiants incorrects. Essayez : admin / 123456, user / 123456 ou viewer / 123456'
-      );
+    try {
+      const response = await authService.login(payload);
+      saveToken(response.accessToken);
+      saveUser(response.user);
+      dispatch({ type: 'AUTH_SUCCESS', payload: { user: response.user, token: response.accessToken } });
+    } catch (err) {
+      dispatch({ type: 'AUTH_FAILURE' });
+      throw err;
     }
-
-    const token = 'mock-jwt-token-' + Date.now();
-
-    const userWithInitials = {
-      ...mockUser,
-      avatarInitials: getInitials(mockUser.username),
-    };
-
-    saveToken(token);
-    saveUser(userWithInitials);
-
-    dispatch({ type: 'AUTH_SUCCESS', payload: { user: userWithInitials, token } });
   }, []);
 
-  const register = useCallback(async () => {
-    throw new Error('Inscription désactivée en mode démo');
+  const register = useCallback(async (payload: RegisterPayload) => {
+    await authService.register(payload);
   }, []);
 
   const logout = useCallback(() => {

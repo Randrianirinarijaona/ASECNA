@@ -87,3 +87,11 @@
 [data-theme="dark"] .leaflet-tile-container {
   filter: brightness(0.85) contrast(1.05);
 }
+
+
+.map-page--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}

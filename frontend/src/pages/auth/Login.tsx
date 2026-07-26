@@ -1,10 +1,18 @@
-import { useState, useEffect } from 'react';
+// pages/auth/Login.tsx
+//
+// MODIFIÉ (minimal) : la gestion du thème gérait jusqu'ici son propre état
+// local + localStorage('theme'), indépendamment du reste de l'application.
+// Depuis l'ajout de contexts/ThemeContext.tsx (nouveau fichier, cf. brief),
+// Login.tsx utilise désormais useTheme() comme AppLayout.tsx et
+// Settings.tsx, pour une seule source de vérité sur le thème. AUCUNE autre
+// logique (authentification, validation du formulaire) n'est modifiée.
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Lock, User, ShieldCheck, UserCircle, GraduationCap,
   ArrowLeft, Eye, EyeOff, AlertCircle, Sun, Moon, CheckCircle2
 } from 'lucide-react';
-import { useAuth, useToast } from '../../hooks';
+import { useAuth, useToast, useTheme } from '../../hooks';
 import { validatePassword } from '../../utils/jwt';
 import type { Role } from '../../types';
 import './Login.css';
@@ -27,18 +35,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
-  // Theme Management (Light / Dark)
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  // Theme Management — délégué au ThemeContext partagé (cf. note ci-dessus).
+  const { resolvedTheme, toggleTheme } = useTheme();
 
   const validateForm = (): string | null => {
     if (!username.trim() || username.length < 3) return 'Le nom d’utilisateur doit contenir au moins 3 caractères';
@@ -83,15 +82,15 @@ export default function Login() {
     <div className="login-root">
       {/* Dynamic Background Overlay */}
       <div className="login-bg-overlay" aria-hidden="true" />
-      
+
       {/* Floating Theme Switcher */}
-      <button 
-        type="button" 
-        className="theme-toggle-btn" 
+      <button
+        type="button"
+        className="theme-toggle-btn"
         onClick={toggleTheme}
         aria-label="Changer de thème"
       >
-        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+        {resolvedTheme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
       </button>
 
       <div className="login-card">

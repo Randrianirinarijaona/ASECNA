@@ -36,12 +36,69 @@ export interface RegisterPayload {
 }
 
 export interface AuthResponse {
-  access_token: string;
-  token_type: string;
+  // NOTE (backend) : le backend répond en camelCase (cf. schemas/user.py ->
+  // CamelModel), donc `accessToken` et non `access_token` comme dans la
+  // version précédente de ce fichier. Corrigé ici pour correspondre
+  // exactement à la réponse réelle de POST /auth/login.
+  accessToken: string;
+  tokenType: string;
   user: User;
 }
 
-// ─── Airports ────────────────────────────────────────────────────────────────
+// ─── Pagination générique (adminService.getLogs, userService.getAll) ───────
+// Manquait du fichier fourni initialement mais utilisé par api.service.ts.
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// ─── Admin (Admin.tsx) ───────────────────────────────────────────────────
+// Reconstruit à partir de l'usage de adminService.getStats()/getLogs() dans
+// api.service.ts ; la page Admin.tsx elle-même n'avait pas été fournie.
+
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  usersByRole: Record<Role, number>;
+  totalAirports: number;
+  totalTechnicalPoints: number;
+  totalLinks: number;
+  linksByCategory: Record<string, number>;
+}
+
+export interface ActivityLog {
+  id: number;
+  userId?: string;
+  username: string;
+  action: string;
+  details?: string;
+  createdAt: string;
+}
+
+// ─── Toasts (ToastContext.tsx) ──────────────────────────────────────────
+// Manquait du fichier fourni initialement mais importé par ToastContext.tsx
+// et ToastStack.tsx.
+
+export type ToastVariant = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastMessage {
+  id: string;
+  message: string;
+  variant: ToastVariant;
+}
+
+// ─── Thème (ThemeContext.tsx) ────────────────────────────────────────────
+// Manquait du fichier fourni initialement mais importé par AppLayout.tsx,
+// Settings.tsx et hooks/index.ts (useTheme). Voir contexts/ThemeContext.tsx
+// (nouveau fichier créé pour combler ce manque).
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+// ─── Airports ────────────────────────────────────────────────────────────
 
 export interface AirportDetail {
   icon: string;
@@ -68,6 +125,12 @@ export interface NetworkSubParameter {
 }
 
 export interface AirportSectionItem {
+  // Ajouté (rétro-compatible, optionnel) : identifiant serveur de l'item,
+  // nécessaire pour cibler les endpoints PATCH /network/items/{id} et
+  // POST /network/items/{id}/sub-parameters depuis useAirportsData.ts.
+  // Absent dans les données strictement locales/mock, toujours présent
+  // une fois l'item chargé depuis l'API.
+  id?: string;
   title: string;
   description?: string;
   details?: string[];
@@ -103,6 +166,11 @@ export interface Airport {
   // (relais VHF/HF, antenne SRNA...) créé depuis les boutons
   // "Ajouter/Supprimer un réseau" de la sidebar (catégories SMA/SRNA).
   isTechnicalPoint?: boolean;
+  // Ajouté : reflète l'appartenance à la liste "Réseau local" de la
+  // sidebar, stockée côté serveur (Airport.in_local_network). Remplace
+  // l'ancien état purement local `localNetworkAirportKeys` géré en mémoire
+  // par useAirportsData — désormais dérivé de ce champ (voir hook mis à jour).
+  inLocalNetwork?: boolean;
   sections: {
     [key: string]: AirportSectionItem[];
   };

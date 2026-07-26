@@ -1,244 +1,221 @@
-import { useCallback, useState } from 'react';
-import {
-  Users, ShieldCheck, UserCheck, Activity,
-  Search, ToggleLeft, ToggleRight, Trash2, Edit,
-} from 'lucide-react';
-import { useToast } from '../../hooks';
-import { userService, adminService } from '../../services/api.service';
-import { useApi, useMutation } from '../../hooks/useApi';
-import { Table, type Column } from '../../components/ui/Table';
-import { ConfirmModal, Modal } from '../../components/ui/Modal';
-import type { User, Role } from '../../types';
+// pages/admin/Admin.tsx
+//
+// NOUVEAU FICHIER : référencé par routes.tsx (<Route path="/admin"
+// element={<Admin />} />, protégé par <AdminRoute>) mais absent des
+// fichiers fournis. Page minimale mais fonctionnelle : statistiques
+// globales (adminService.getStats), gestion des utilisateurs (activation,
+// changement de rôle, suppression) et journal d'activité
+// (adminService.getLogs), en réutilisant les composants UI déjà présents
+// dans le projet (Modal/ConfirmModal, Spinner) et le style utilitaire
+// existant (cards, badges) plutôt que d'introduire un nouveau design.
+import { useEffect, useState, useCallback } from 'react';
+import { Users, Plane, Network, Radio, Shield, Trash2 } from 'lucide-react';
+import { useAuth, useToast } from '../../hooks';
+import { adminService, userService } from '../../services/api.service';
+import { ConfirmModal } from '../../components/ui/Modal';
+import { Spinner } from '../../components/ui/Spinner';
+import type { AdminStats, ActivityLog, User, Role } from '../../types';
 // @ts-ignore: CSS side-effect import handled by build tooling
 import './Admin.css';
 
-function StatCard({ label, value, icon, color }: {
-  label: string; value: number; icon: React.ReactNode; color: string;
-}) {
-  return (
-    <div className="admin-stat">
-      <div className="admin-stat-icon" style={{ background: color }}>{icon}</div>
-      <div>
-        <div className="admin-stat-value">{value}</div>
-        <div className="admin-stat-label">{label}</div>
-      </div>
-    </div>
-  );
-}
-
 export default function Admin() {
+  const { user: currentUser } = useAuth();
   const { showToast } = useToast();
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
-  const [editTarget, setEditTarget] = useState<User | null>(null);
-  const [editRole, setEditRole] = useState<Role>('user');
 
-  const statsFetcher = useCallback(() => adminService.getStats(), []);
-  const { data: stats } = useApi(statsFetcher);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null);
 
-  const usersFetcher = useCallback(
-    () => userService.getAll(page, 10, search),
-    [page, search]
-  );
-  const { data: usersData, isLoading, error, refetch } = useApi(usersFetcher, [page, search]);
+  const loadAll = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [statsRes, usersRes, logsRes] = await Promise.all([
+        adminService.getStats(),
+        userService.getAll(1, 50),
+        adminService.getLogs(1, 20),
+      ]);
+      setStats(statsRes);
+      setUsers(usersRes.items);
+      setLogs(logsRes.items);
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const { execute: deleteUser, isLoading: deleting } = useMutation(userService.delete);
-  const { execute: toggleActive } = useMutation(({ id, isActive }: { id: string; isActive: boolean }) =>
-    userService.toggleActive(id, isActive)
-  );
-  const { execute: changeRole } = useMutation(({ id, role }: { id: string; role: Role }) =>
-    userService.changeRole(id, role)
-  );
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    await deleteUser(deleteTarget.id);
-    showToast(`User "${deleteTarget.username}" deleted`, 'success');
-    setDeleteTarget(null);
-    refetch();
-  };
-
-  const handleToggleActive = async (user: User) => {
-    const result = await toggleActive({ id: user.id, isActive: !user.isActive });
-    if (result) {
-      showToast(
-        `${user.username} ${result.isActive ? 'activated' : 'deactivated'}`,
-        result.isActive ? 'success' : 'warning'
-      );
-      refetch();
+  const handleRoleChange = async (userId: string, role: Role) => {
+    try {
+      const updated = await userService.changeRole(userId, role);
+      setUsers((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+      showToast('Rôle mis à jour', 'success');
+    } catch (err) {
+      showToast((err as Error).message, 'error');
     }
   };
 
-  const handleEditRole = async () => {
-    if (!editTarget) return;
-    await changeRole({ id: editTarget.id, role: editRole });
-    showToast(`Role updated to ${editRole}`, 'success');
-    setEditTarget(null);
-    refetch();
+  const handleToggleActive = async (u: User) => {
+    try {
+      const updated = await userService.toggleActive(u.id, !u.isActive);
+      setUsers((prev) => prev.map((x) => (x.id === u.id ? updated : x)));
+      showToast(updated.isActive ? 'Compte activé' : 'Compte désactivé', 'info');
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    }
   };
 
-  const columns: Column<User>[] = [
-    {
-      key: 'user',
-      header: 'User',
-      render: (u) => (
-        <div className="user-cell">
-          <div className="user-avatar-sm">{u.avatarInitials || u.username.slice(0, 2).toUpperCase()}</div>
-          <div>
-            <div className="user-name">{u.username}</div>
-            {u.email && <div className="user-email">{u.email}</div>}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'role',
-      header: 'Role',
-      width: '120px',
-      render: (u) => (
-        <span className={`badge-role badge-role--${u.role}`}>{u.role}</span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: '100px',
-      render: (u) => (
-        <span className={`badge-status badge-status--${u.isActive ? 'active' : 'inactive'}`}>
-          {u.isActive ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-    {
-      key: 'joined',
-      header: 'Joined',
-      width: '120px',
-      render: (u) => (
-        <span className="date-cell">
-          {new Date(u.createdAt).toLocaleDateString('en-GB', {
-            day: 'numeric', month: 'short', year: '2-digit',
-          })}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      width: '130px',
-      render: (u) => (
-        <div className="action-buttons">
-          <button
-            className="action-btn"
-            title={u.isActive ? 'Deactivate' : 'Activate'}
-            onClick={() => handleToggleActive(u)}
-          >
-            {u.isActive ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-          </button>
-          <button
-            className="action-btn"
-            title="Change role"
-            onClick={() => { setEditTarget(u); setEditRole(u.role); }}
-          >
-            <Edit size={15} />
-          </button>
-          <button
-            className="action-btn action-btn--danger"
-            title="Delete user"
-            onClick={() => setDeleteTarget(u)}
-          >
-            <Trash2 size={15} />
-          </button>
-        </div>
-      ),
-    },
-  ];
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      await userService.delete(pendingDelete.id);
+      setUsers((prev) => prev.filter((u) => u.id !== pendingDelete.id));
+      showToast('Utilisateur supprimé', 'success');
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setPendingDelete(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="page admin-page admin-page--loading">
+        <Spinner size="lg" label="Chargement du panneau admin…" />
+      </div>
+    );
+  }
 
   return (
     <div className="page admin-page">
       <div className="page-header">
-        <h1 className="page-title">Admin panel</h1>
-        <p className="page-subtitle">Manage users, permissions and system settings</p>
+        <h1 className="page-title">Administration</h1>
+        <p className="page-subtitle">Gestion des utilisateurs et supervision du réseau</p>
       </div>
 
       {stats && (
-        <div className="admin-stats">
-          <StatCard label="Total users" value={stats.totalUsers}
-            icon={<Users size={20} />} color="rgba(99,102,241,0.12)" />
-          <StatCard label="Active users" value={stats.activeUsers}
-            icon={<UserCheck size={20} />} color="rgba(34,197,94,0.12)" />
-          <StatCard label="Admins" value={stats.adminCount}
-            icon={<ShieldCheck size={20} />} color="rgba(245,158,11,0.12)" />
-          <StatCard label="Recent logins" value={stats.recentLogins}
-            icon={<Activity size={20} />} color="rgba(96,165,250,0.12)" />
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)' }}><Users size={20} /></div>
+            <div className="stat-body">
+              <div className="stat-value">{stats.totalUsers}</div>
+              <div className="stat-label">Utilisateurs ({stats.activeUsers} actifs)</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: 'rgba(34,197,94,0.12)' }}><Plane size={20} /></div>
+            <div className="stat-body">
+              <div className="stat-value">{stats.totalAirports}</div>
+              <div className="stat-label">Aéroports</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)' }}><Radio size={20} /></div>
+            <div className="stat-body">
+              <div className="stat-value">{stats.totalTechnicalPoints}</div>
+              <div className="stat-label">Points techniques</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: 'rgba(96,165,250,0.12)' }}><Network size={20} /></div>
+            <div className="stat-body">
+              <div className="stat-value">{stats.totalLinks}</div>
+              <div className="stat-label">Liaisons</div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="card admin-card">
-        <div className="card-toolbar">
-          <h2 className="card-title" style={{ marginBottom: 0 }}>User management</h2>
-          <div className="toolbar-search">
-            <Search size={15} className="search-icon" />
-            <input
-              type="search"
-              placeholder="Search users…"
-              className="form-input search-input"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
-          </div>
+      <div className="dashboard-section">
+        <div className="section-header">
+          <h2 className="section-title">Utilisateurs</h2>
         </div>
+        <div className="card">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Utilisateur</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.username}</td>
+                  <td>{u.email || '—'}</td>
+                  <td>
+                    <select
+                      className="form-input"
+                      value={u.role}
+                      disabled={u.id === currentUser?.id}
+                      onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
+                    >
+                      <option value="admin">admin</option>
+                      <option value="technicien">technicien</option>
+                      <option value="user">user</option>
+                    </select>
+                  </td>
+                  <td>
+                    <button
+                      className={`badge-status badge-status--${u.isActive ? 'active' : 'inactive'}`}
+                      onClick={() => handleToggleActive(u)}
+                      disabled={u.id === currentUser?.id}
+                    >
+                      {u.isActive ? 'Actif' : 'Inactif'}
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className="icon-btn icon-btn--danger icon-btn--sm"
+                      title="Supprimer"
+                      disabled={u.id === currentUser?.id}
+                      onClick={() => setPendingDelete(u)}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-        <div className="table-responsive">
-          <Table
-            columns={columns}
-            data={usersData?.items || []}
-            isLoading={isLoading}
-            error={error}
-            emptyMessage="No users found"
-            total={usersData?.total}
-            page={page}
-            pageSize={10}
-            onPageChange={setPage}
-          />
+      <div className="dashboard-section">
+        <div className="section-header">
+          <h2 className="section-title">
+            <Shield size={16} /> Journal d'activité
+          </h2>
+        </div>
+        <div className="card activity-card">
+          {logs.length === 0 && <p className="network-empty">Aucune activité enregistrée</p>}
+          {logs.map((log) => (
+            <div key={log.id} className="activity-item">
+              <span className="activity-time">{new Date(log.createdAt).toLocaleString('fr-FR')}</span>
+              <span className="activity-msg">{log.action}</span>
+              <span className="activity-tag">{log.username}</span>
+            </div>
+          ))}
         </div>
       </div>
 
       <ConfirmModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        isOpen={Boolean(pendingDelete)}
+        onClose={() => setPendingDelete(null)}
         onConfirm={handleDelete}
-        title="Delete user"
-        message={`Are you sure you want to permanently delete "${deleteTarget?.username}"? This cannot be undone.`}
-        confirmLabel="Delete user"
-        isLoading={deleting}
+        title="Supprimer l'utilisateur"
+        message={`Voulez-vous vraiment supprimer le compte "${pendingDelete?.username}" ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
       />
-
-      <Modal
-        isOpen={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        title={`Change role — ${editTarget?.username}`}
-        size="sm"
-        footer={
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-secondary" onClick={() => setEditTarget(null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleEditRole}>Save changes</button>
-          </div>
-        }
-      >
-        <div className="role-selector">
-          {(['user', 'technicien', 'admin'] as const).map((r) => (
-            <button
-              key={r}
-              className={`role-option ${editRole === r ? 'role-option--active' : ''}`}
-              onClick={() => setEditRole(r)}
-            >
-              {r === 'admin' ? <ShieldCheck size={18} /> : <Users size={18} />}
-              <span className="role-option-label">{r}</span>
-            </button>
-          ))}
-        </div>
-      </Modal>
     </div>
   );
 }

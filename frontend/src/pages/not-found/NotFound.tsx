@@ -1,3 +1,4 @@
+//notFound.tsx
 import { Link } from 'react-router-dom';
 import { PlaneTakeoff } from 'lucide-react';
 import './NotFound.css';

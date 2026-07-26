@@ -1,3 +1,4 @@
+//formatters.ts
 export const formatDate = (date: string | Date, options?: Intl.DateTimeFormatOptions) => {
   return new Date(date).toLocaleDateString('fr-FR', options);
 };

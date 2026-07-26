@@ -1,3 +1,12 @@
+// pages/map/MapPage.tsx
+//
+// MODIFIÉ (minimal) : useAirportsData() charge désormais les données
+// depuis le backend de façon asynchrone (cf. hook réécrit). Ce fichier
+// ajoute uniquement la gestion de `isLoading`/`error` (affichage d'un
+// spinner pendant le chargement initial, message d'erreur si l'API est
+// injoignable) via le composant Spinner déjà présent dans le projet.
+// Tout le reste (logique de la carte, modales, flux de liaison...) est
+// STRICTEMENT IDENTIQUE à la version fournie.
 import { useState, useMemo, useCallback } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 // @ts-ignore
@@ -15,6 +24,7 @@ import LinkManagerModal from '../../components/map/LinkManagerModal';
 import NetworkNodeModal from '../../components/map/NetworkNodeModal';
 import LinkDetailModal from '../../components/map/LinkDetailModal';
 import LocalNetworkModal from '../../components/map/LocalNetworkModal';
+import { Spinner } from '../../components/ui/Spinner';
 
 import { useAirportsData } from '../../hooks/useAirportsData';
 import { getNetworkLinkColor, getAirportsByNetwork } from '../../data/networkCategories';
@@ -40,6 +50,8 @@ export default function MapPage() {
   const {
     airports,
     links,
+    isLoading,
+    error,
     addAirport,
     addTechnicalPoint,
     deleteAirport,
@@ -202,6 +214,27 @@ export default function MapPage() {
     return { key: localNetworkAirportKey, airport };
   }, [localNetworkAirportKey, airports]);
 
+  // ─── Chargement initial / erreur réseau ─────────────────────────────────
+  // Ajouté : le hook charge maintenant les données depuis le backend, ce
+  // qui n'est plus instantané comme avec l'ancien état en mémoire.
+  if (isLoading) {
+    return (
+      <div className="map-page map-page--loading">
+        <Spinner size="lg" label="Chargement du réseau ASECNA…" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="map-page map-page--loading">
+        <p className="form-error">
+          Impossible de contacter le serveur ({error}). Vérifiez que le backend FastAPI est démarré.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="map-page">
       <MapHeader />
@@ -262,7 +295,7 @@ export default function MapPage() {
               worldCopyJump: false,
               maxBounds: WORLD_BOUNDS,
               maxBoundsViscosity: 1.0,
-              style: { height: '100%', width: '100%' },
+              style: { height: '100%', width: '100%', zIndex:"10"},
             } as any)}
           >
             <TileLayer

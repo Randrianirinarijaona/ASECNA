@@ -1,3 +1,5 @@
+//Spinener.tsx
+// @ts-ignore: side-effect import of CSS file without type declarations
 import './Spinner.css';
 
 interface SpinnerProps {

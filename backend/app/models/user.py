@@ -1,18 +1,44 @@
-from sqlalchemy import Column, String, Boolean, Enum, TIMESTAMP
-from sqlalchemy.sql import func
-from app.core.database import Base
+import enum
 import uuid
+from datetime import datetime
+
+from sqlalchemy import String, Boolean, DateTime, Enum, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+class RoleEnum(str, enum.Enum):
+    """
+    Trois rôles utilisés par le frontend (cf. types.ts / Login.tsx) :
+    - admin       : accès total (CRUD réseau, gestion utilisateurs)
+    - technicien  : accès en écriture au réseau, pas d'admin panel
+    - user        : lecture seule stricte sur la carte
+    """
+    admin = "admin"
+    technicien = "technicien"
+    user = "user"
+
+
+def gen_uuid() -> str:
+    return str(uuid.uuid4())
+
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    role = Column(Enum('admin', 'technicien', 'user'), default='user')
-    is_active = Column(Boolean, default=True)
-    avatar_initials = Column(String(5))
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    last_login = Column(TIMESTAMP)
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum), default=RoleEnum.user, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    def get_avatar_initials(self) -> str:
+        parts = [p for p in self.username.replace("-", " ").replace("_", " ").replace(".", " ").split(" ") if p]
+        if len(parts) >= 2:
+            return (parts[0][0] + parts[1][0]).upper()
+        return self.username[:2].upper()

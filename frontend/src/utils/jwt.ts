@@ -1,3 +1,4 @@
+//jwt.ts
 import type { User } from '../types';
 
 const TOKEN_KEY = 'asecna_access_token';

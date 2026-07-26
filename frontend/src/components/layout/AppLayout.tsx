@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth, useTheme, useToast } from '../../hooks';
 import { ToastStack } from '../ui/ToastStack';
+// @ts-ignore: CSS side-effect import handled by build tooling
 import './AppLayout.css';
 
 interface AppLayoutProps {

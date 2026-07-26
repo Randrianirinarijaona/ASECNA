@@ -1,3 +1,4 @@
+//useApi.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseApiState<T> {

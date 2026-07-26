@@ -24,7 +24,11 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ─── Core Fetch Wrapper ───────────────────────────────────────────────────────
 
-async function request<T>(
+// MODIFIÉ : ajout du mot-clé `export` (seule modification de cette fonction)
+// afin que services/network.service.ts (nouveau fichier) puisse réutiliser
+// exactement le même wrapper fetch (gestion du 401, des erreurs, du header
+// Authorization) plutôt que de le dupliquer.
+export async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -56,18 +60,18 @@ async function request<T>(
 
 export const authService = {
   login: (payload: LoginPayload): Promise<AuthResponse> =>
-    request<AuthResponse>('/login', {
+    request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  register: (payload: Omit<RegisterPayload, 'confirmPassword'>): Promise<{ message: string }> =>
-    request('/register', {
+  register: (payload: Omit<RegisterPayload, 'confirmPassword'> & { confirmPassword: string }): Promise<{ message: string }> =>
+    request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
-  me: (): Promise<User> => request<User>('/me'),
+  me: (): Promise<User> => request<User>('/auth/me'),
 
   resetPasswordRequest: (email: string): Promise<{ message: string }> =>
     request('/auth/reset-password', {
@@ -78,7 +82,7 @@ export const authService = {
   changePassword: (currentPassword: string, newPassword: string): Promise<{ message: string }> =>
     request('/auth/change-password', {
       method: 'POST',
-      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      body: JSON.stringify({ currentPassword, newPassword }),
     }),
 };
 
@@ -104,10 +108,9 @@ export const userService = {
   toggleActive: (id: string, isActive: boolean): Promise<User> =>
     request<User>(`/users/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ is_active: isActive }),
+      body: JSON.stringify({ isActive }),
     }),
 
-  // Étendu à 'technicien' | 'user' (anciennement 'admin' | 'client')
   changeRole: (id: string, role: 'admin' | 'technicien' | 'user'): Promise<User> =>
     request<User>(`/users/${id}`, {
       method: 'PATCH',

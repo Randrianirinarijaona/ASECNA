@@ -1,3 +1,4 @@
+//ToastStack.tsx
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useToast } from '../../hooks';
 import type { ToastVariant } from '../../types';
