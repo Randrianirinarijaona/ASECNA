@@ -75,6 +75,9 @@ class LinkCreate(CamelModel):
     item_title: str
     from_airport_key: str
     to_airport_key: str
+    # NOUVEAU : cf. LinkManagerModal.tsx (sélecteur "Unidirectionnelle /
+    # Bidirectionnelle"). Par défaut False = comportement historique.
+    bidirectional: bool = False
 
 
 class LinkOut(CamelModel):
@@ -83,4 +86,5 @@ class LinkOut(CamelModel):
     item_title: str
     from_airport_key: str
     to_airport_key: str
+    bidirectional: bool = False
     parameters: list[ParameterOut] = []

@@ -13,10 +13,21 @@ interface LinkManagerModalProps {
   mode: 'add' | 'remove';
   airports: AirportsMap;
   links: NetworkLink[];
-  onAddLink: (category: NetworkCategoryKey, itemTitle: string, from: string, to: string) => void;
+  // MODIFIÉ : ajout du paramètre `bidirectional` (comportement inchangé si
+  // l'appelant ne le fournit pas, cf. valeur par défaut côté hook).
+  onAddLink: (
+    category: NetworkCategoryKey,
+    itemTitle: string,
+    from: string,
+    to: string,
+    bidirectional: boolean
+  ) => void;
   onDeleteLink: (linkId: string) => void;
   onClose: () => void;
 }
+
+// Type de liaison proposé dans le formulaire d'ajout.
+type LinkDirectionType = 'unidirectional' | 'bidirectional';
 
 export default function LinkManagerModal({
   category,
@@ -32,6 +43,10 @@ export default function LinkManagerModal({
 
   const [fromKey, setFromKey] = useState('');
   const [toKey, setToKey] = useState('');
+  // NOUVEAU : type de liaison, par défaut "Unidirectionnelle" pour
+  // conserver exactement le comportement actuel si l'utilisateur ne
+  // touche pas au champ.
+  const [linkType, setLinkType] = useState<LinkDirectionType>('unidirectional');
 
   const matchingLinks = links.filter(
     (l) => l.category === category && l.itemTitle.toLowerCase().includes(subItem.toLowerCase())
@@ -39,9 +54,10 @@ export default function LinkManagerModal({
 
   const handleCreate = () => {
     if (!fromKey || !toKey || fromKey === toKey) return;
-    onAddLink(category, subItem, fromKey, toKey);
+    onAddLink(category, subItem, fromKey, toKey, linkType === 'bidirectional');
     setFromKey('');
     setToKey('');
+    setLinkType('unidirectional');
   };
 
   return (
@@ -82,6 +98,17 @@ export default function LinkManagerModal({
                   ))}
               </select>
 
+              {/* NOUVEAU : type de liaison */}
+              <label>Type de liaison</label>
+              <select
+                className="form-input"
+                value={linkType}
+                onChange={(e) => setLinkType(e.target.value as LinkDirectionType)}
+              >
+                <option value="unidirectional">Unidirectionnelle</option>
+                <option value="bidirectional">Bidirectionnelle</option>
+              </select>
+
               <button
                 className="btn btn-primary btn-sm"
                 style={{ marginTop: 12 }}
@@ -114,6 +141,7 @@ export default function LinkManagerModal({
                           }}
                         />
                         <span className="network-item-title">
+                          {link.bidirectional ? '⇄ ' : ''}
                           {(from?.iata || from?.name) ?? '—'} → {(to?.iata || to?.name) ?? '—'}
                         </span>
                         <button

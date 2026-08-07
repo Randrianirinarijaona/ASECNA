@@ -1,17 +1,22 @@
 // hooks/useAirportsData.ts
 //
-// RÉÉCRIT : la logique en mémoire (useState local) est remplacée par des
-// appels au backend FastAPI via services/network.service.ts. Les noms de
-// fonctions ET leurs signatures sont conservés à l'identique par rapport à
-// la version d'origine (addAirport, deleteAirport, addNetworkItem, ...)
-// pour que MapPage.tsx, MainSidebar.tsx, NetworkModal.tsx, etc. n'aient
-// besoin d'AUCUNE modification. Deux ajouts non-cassants au retour du hook :
-// `isLoading` et `error`, à utiliser par MapPage pour afficher un spinner
-// pendant le chargement initial.
+// FUSIONNÉ : reprend la version connectée au backend (chargement initial
+// via l'API, isLoading/error) et y intègre les nouvelles fonctionnalités
+// demandées ensuite : liaisons bidirectionnelles (paramètre `bidirectional`
+// transmis à l'API) et points techniques locaux — désormais persistés via
+// /local-points/... (localPointService) au lieu d'un état en mémoire.
+//
+// Les noms de fonctions exposées restent stables pour ne pas impacter les
+// composants qui les consomment (MapPage.tsx notamment).
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { Airport } from '../types';
+import type { Airport, Parameter } from '../types';
 import type { NetworkCategoryKey, NetworkLink } from '../data/networkCategories';
-import { airportService, networkService, linkService } from '../services/network.service';
+import {
+  airportService,
+  networkService,
+  linkService,
+  localPointService,
+} from '../services/network.service';
 import { useToast } from './index';
 
 export type AirportsMap = Record<string, Airport>;
@@ -23,6 +28,16 @@ interface NetworkItemInput {
   details?: string[];
 }
 
+// Représente un point technique local (module Réseau local, vue carte
+// zoomée d'un aéroport). Persisté côté serveur via /local-points/...
+export interface LocalTechnicalPoint {
+  id: string;
+  parentAirportKey: string;
+  name: string;
+  coords: [number, number];
+  localParameters: Parameter[];
+}
+
 export function useAirportsData() {
   const { showToast } = useToast();
 
@@ -30,6 +45,12 @@ export function useAirportsData() {
   const [links, setLinks] = useState<NetworkLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // NOUVEAU : points techniques locaux, chargés à la demande par
+  // aéroport (évite de tout rapatrier au démarrage) et accumulés dans un
+  // tableau à plat, filtré ensuite par `getLocalTechnicalPointsForAirport`.
+  const [localTechnicalPoints, setLocalTechnicalPoints] = useState<LocalTechnicalPoint[]>([]);
+  const [loadedLocalPointAirports, setLoadedLocalPointAirports] = useState<Set<string>>(new Set());
 
   // ─── Chargement initial ────────────────────────────────────────────────
 
@@ -105,6 +126,7 @@ export function useAirportsData() {
           return next;
         });
         setLinks((prev) => prev.filter((l) => l.fromAirportKey !== key && l.toAirportKey !== key));
+        setLocalTechnicalPoints((prev) => prev.filter((p) => p.parentAirportKey !== key));
       } catch (err) {
         handleError(err, "Impossible de supprimer l'aéroport");
       }
@@ -199,9 +221,6 @@ export function useAirportsData() {
     [handleError]
   );
 
-  // Recherche locale de l'id serveur d'un item (nécessaire pour PATCH
-  // /network/items/{id} et POST /network/items/{id}/sub-parameters, alors
-  // que la version en mémoire d'origine ciblait tout par le titre).
   const findItemId = useCallback(
     (airportKey: string, category: NetworkCategoryKey, itemTitle: string): string | null => {
       const airport = airports[airportKey];
@@ -330,10 +349,20 @@ export function useAirportsData() {
   // ─── Liaisons (flèches) ────────────────────────────────────────────────
 
   const addNetworkLink = useCallback(
-    async (category: NetworkCategoryKey, itemTitle: string, fromAirportKey: string, toAirportKey: string) => {
+    async (
+      category: NetworkCategoryKey,
+      itemTitle: string,
+      fromAirportKey: string,
+      toAirportKey: string,
+      // NOUVEAU : type de liaison choisi dans LinkManagerModal. Par défaut
+      // `false` : le flux "2 clics" sur la carte (NetworkItemModal ->
+      // onStartLink -> clic sur un aéroport) ne fournit pas ce paramètre et
+      // conserve donc exactement son comportement d'origine.
+      bidirectional: boolean = false
+    ) => {
       if (fromAirportKey === toAirportKey) return;
       try {
-        const created = await linkService.create(category, itemTitle, fromAirportKey, toAirportKey);
+        const created = await linkService.create(category, itemTitle, fromAirportKey, toAirportKey, bidirectional);
         setLinks((prev) => [...prev, created]);
       } catch (err) {
         handleError(err, 'Impossible de créer cette liaison (peut-être déjà existante)');
@@ -443,8 +472,9 @@ export function useAirportsData() {
   );
 
   // ─── Réseau local : liste d'aéroports suivis ────────────────────────────
-  // Dérivée du champ `inLocalNetwork` (persistant côté serveur) plutôt que
-  // d'un état local séparé, pour rester cohérent après un rechargement de page.
+  // Dérivée du champ `inLocalNetwork` (persistant côté serveur). Le seed
+  // backend place désormais les 4 aéroports initiaux (Ivato/Toamasina/
+  // Mahajanga/Fort Dauphin) avec `in_local_network = true`.
 
   const localNetworkAirportKeys = useMemo(
     () => Object.entries(airports).filter(([, a]) => a.inLocalNetwork).map(([key]) => key),
@@ -573,6 +603,142 @@ export function useAirportsData() {
     [handleError]
   );
 
+  // ─── NOUVEAU : points techniques locaux (vue carte zoomée) ──────────────
+  // Persistés via /local-points/... (localPointService) au lieu d'un état
+  // purement en mémoire.
+
+  const ensureLocalTechnicalPointsLoaded = useCallback(
+    async (airportKey: string) => {
+      if (loadedLocalPointAirports.has(airportKey)) return;
+      try {
+        const points = await localPointService.list(airportKey);
+        setLocalTechnicalPoints((prev) => {
+          const withoutAirport = prev.filter((p) => p.parentAirportKey !== airportKey);
+          return [...withoutAirport, ...points];
+        });
+        setLoadedLocalPointAirports((prev) => new Set(prev).add(airportKey));
+      } catch (err) {
+        handleError(err, 'Impossible de charger les points techniques de cet aéroport');
+      }
+    },
+    [loadedLocalPointAirports, handleError]
+  );
+
+  const addLocalTechnicalPoint = useCallback(
+    async (parentAirportKey: string, name: string, coords: [number, number]) => {
+      try {
+        const created = await localPointService.create(parentAirportKey, {
+          name,
+          lat: coords[0],
+          lng: coords[1],
+        });
+        setLocalTechnicalPoints((prev) => [...prev, created]);
+        return created.id;
+      } catch (err) {
+        handleError(err, "Impossible de créer le point technique");
+        return null;
+      }
+    },
+    [handleError]
+  );
+
+  const deleteLocalTechnicalPoint = useCallback(
+    async (pointId: string) => {
+      try {
+        await localPointService.remove(pointId);
+        setLocalTechnicalPoints((prev) => prev.filter((p) => p.id !== pointId));
+      } catch (err) {
+        handleError(err, 'Impossible de supprimer le point technique');
+      }
+    },
+    [handleError]
+  );
+
+  const getLocalTechnicalPointsForAirport = useCallback(
+    (airportKey: string) => localTechnicalPoints.filter((p) => p.parentAirportKey === airportKey),
+    [localTechnicalPoints]
+  );
+
+  const addLocalTechnicalPointParameter = useCallback(
+    async (pointId: string, name: string) => {
+      if (!name.trim()) return;
+      try {
+        const param = await localPointService.addParameter(pointId, name.trim());
+        setLocalTechnicalPoints((prev) =>
+          prev.map((p) => (p.id === pointId ? { ...p, localParameters: [...p.localParameters, param] } : p))
+        );
+      } catch (err) {
+        handleError(err, "Impossible d'ajouter le paramètre");
+      }
+    },
+    [handleError]
+  );
+
+  const deleteLocalTechnicalPointParameter = useCallback(
+    async (pointId: string, paramId: string) => {
+      try {
+        await localPointService.deleteParameter(paramId);
+        setLocalTechnicalPoints((prev) =>
+          prev.map((p) =>
+            p.id === pointId
+              ? { ...p, localParameters: p.localParameters.filter((param) => param.id !== paramId) }
+              : p
+          )
+        );
+      } catch (err) {
+        handleError(err, 'Impossible de supprimer le paramètre');
+      }
+    },
+    [handleError]
+  );
+
+  const addLocalTechnicalPointParameterValue = useCallback(
+    async (pointId: string, paramId: string, name: string, text: string) => {
+      if (!name.trim() || !text.trim()) return;
+      try {
+        const value = await localPointService.addParameterValue(paramId, name.trim(), text.trim());
+        setLocalTechnicalPoints((prev) =>
+          prev.map((p) => {
+            if (p.id !== pointId) return p;
+            return {
+              ...p,
+              localParameters: p.localParameters.map((param) =>
+                param.id === paramId ? { ...param, values: [...param.values, value] } : param
+              ),
+            };
+          })
+        );
+      } catch (err) {
+        handleError(err, "Impossible d'ajouter la valeur");
+      }
+    },
+    [handleError]
+  );
+
+  const deleteLocalTechnicalPointParameterValue = useCallback(
+    async (pointId: string, paramId: string, valueId: string) => {
+      try {
+        await localPointService.deleteParameterValue(valueId);
+        setLocalTechnicalPoints((prev) =>
+          prev.map((p) => {
+            if (p.id !== pointId) return p;
+            return {
+              ...p,
+              localParameters: p.localParameters.map((param) =>
+                param.id === paramId
+                  ? { ...param, values: param.values.filter((v) => v.id !== valueId) }
+                  : param
+              ),
+            };
+          })
+        );
+      } catch (err) {
+        handleError(err, 'Impossible de supprimer la valeur');
+      }
+    },
+    [handleError]
+  );
+
   return {
     airports,
     links,
@@ -602,5 +768,15 @@ export function useAirportsData() {
     deleteAirportLocalParameter,
     addAirportLocalParameterValue,
     deleteAirportLocalParameterValue,
+    // Points techniques locaux (NOUVEAU)
+    localTechnicalPoints,
+    ensureLocalTechnicalPointsLoaded,
+    addLocalTechnicalPoint,
+    deleteLocalTechnicalPoint,
+    getLocalTechnicalPointsForAirport,
+    addLocalTechnicalPointParameter,
+    deleteLocalTechnicalPointParameter,
+    addLocalTechnicalPointParameterValue,
+    deleteLocalTechnicalPointParameterValue,
   };
 }

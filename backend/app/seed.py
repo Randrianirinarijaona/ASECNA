@@ -61,7 +61,13 @@ def run():
         for key, (name, iata, lat, lng, items) in AIRPORTS.items():
             if db.get(Airport, key):
                 continue
-            airport = Airport(key=key, name=name, iata=iata, lat=lat, lng=lng, is_technical_point=False)
+            # MODIFIÉ : les 4 aéroports initiaux démarrent désormais dans la
+            # liste "Réseau local" de la sidebar (cf. useAirportsData.ts
+            # frontend : localNetworkAirportKeys = Object.keys(INITIAL_AIRPORTS)).
+            airport = Airport(
+                key=key, name=name, iata=iata, lat=lat, lng=lng,
+                is_technical_point=False, in_local_network=True,
+            )
             db.add(airport)
             db.flush()
             for category, title, description, details, status in items:

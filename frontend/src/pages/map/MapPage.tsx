@@ -1,16 +1,8 @@
-// pages/map/MapPage.tsx
-//
-// MODIFIÉ (minimal) : useAirportsData() charge désormais les données
-// depuis le backend de façon asynchrone (cf. hook réécrit). Ce fichier
-// ajoute uniquement la gestion de `isLoading`/`error` (affichage d'un
-// spinner pendant le chargement initial, message d'erreur si l'API est
-// injoignable) via le composant Spinner déjà présent dans le projet.
-// Tout le reste (logique de la carte, modales, flux de liaison...) est
-// STRICTEMENT IDENTIQUE à la version fournie.
-import { useState, useMemo, useCallback } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
+import { Plus } from 'lucide-react';
 
 import MapHeader from '../../components/map/MapHeader';
 import MainSidebar from '../../components/map/MainSidebar';
@@ -24,6 +16,7 @@ import LinkManagerModal from '../../components/map/LinkManagerModal';
 import NetworkNodeModal from '../../components/map/NetworkNodeModal';
 import LinkDetailModal from '../../components/map/LinkDetailModal';
 import LocalNetworkModal from '../../components/map/LocalNetworkModal';
+import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
 
 import { useAirportsData } from '../../hooks/useAirportsData';
@@ -38,6 +31,55 @@ const WORLD_BOUNDS: [[number, number], [number, number]] = [
   [-90, -180],
   [90, 180],
 ];
+
+const MADAGASCAR_CENTER: [number, number] = [-18.9, 46.8];
+const DEFAULT_ZOOM = 6;
+const MIN_ZOOM = 3;
+const LOCAL_ZOOM = 13;
+const LOCAL_MIN_ZOOM = 11;
+const LOCAL_BOUNDS_DELTA = 0.15;
+
+// Pilote la vue Leaflet (zoom + bounds) selon l'aéroport actuellement
+// affiché en vue "carte zoomée" dans le module Réseau local.
+function LocalAirportZoomController({ targetCoords }: { targetCoords: [number, number] | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (targetCoords) {
+      const [lat, lng] = targetCoords;
+      map.setMinZoom(LOCAL_MIN_ZOOM);
+      map.setMaxBounds([
+        [lat - LOCAL_BOUNDS_DELTA, lng - LOCAL_BOUNDS_DELTA],
+        [lat + LOCAL_BOUNDS_DELTA, lng + LOCAL_BOUNDS_DELTA],
+      ]);
+      map.flyTo(targetCoords, LOCAL_ZOOM, { duration: 0.75 });
+    } else {
+      map.setMinZoom(MIN_ZOOM);
+      map.setMaxBounds(WORLD_BOUNDS);
+      map.flyTo(MADAGASCAR_CENTER, DEFAULT_ZOOM, { duration: 0.75 });
+    }
+  }, [targetCoords, map]);
+
+  return null;
+}
+
+// Capte les clics sur la carte pour placer un point technique local,
+// uniquement quand `active` est vrai.
+function LocalPointClickCatcher({
+  active,
+  onPick,
+}: {
+  active: boolean;
+  onPick: (coords: [number, number]) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      if (!active) return;
+      onPick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
 
 export default function MapPage() {
   const { user } = useAuth();
@@ -71,10 +113,14 @@ export default function MapPage() {
     localNetworkAirportKeys,
     addAirportToLocalNetwork,
     removeAirportFromLocalNetwork,
-    addAirportLocalParameter,
-    deleteAirportLocalParameter,
-    addAirportLocalParameterValue,
-    deleteAirportLocalParameterValue,
+    // Points techniques locaux
+    localTechnicalPoints,
+    ensureLocalTechnicalPointsLoaded,
+    addLocalTechnicalPoint,
+    addLocalTechnicalPointParameter,
+    deleteLocalTechnicalPointParameter,
+    addLocalTechnicalPointParameterValue,
+    deleteLocalTechnicalPointParameterValue,
   } = useAirportsData();
 
   const [activeModule, setActiveModule] = useState<MapModule>(null);
@@ -105,9 +151,12 @@ export default function MapPage() {
     mode: 'add' | 'remove';
   } | null>(null);
 
-  const [localNetworkAirportKey, setLocalNetworkAirportKey] = useState<string | null>(null);
-
-  const centerMadagascar: [number, number] = [-18.9, 46.8];
+  // Vue carte zoomée d'un aéroport du module Réseau local.
+  const [zoomedLocalAirportKey, setZoomedLocalAirportKey] = useState<string | null>(null);
+  const [selectedLocalPointId, setSelectedLocalPointId] = useState<string | null>(null);
+  const [addingLocalPointMode, setAddingLocalPointMode] = useState(false);
+  const [pendingPointCoords, setPendingPointCoords] = useState<[number, number] | null>(null);
+  const [newPointName, setNewPointName] = useState('');
 
   const technicalPoints = useMemo(
     () => Object.fromEntries(Object.entries(airports).filter(([, a]) => a.isTechnicalPoint)),
@@ -121,6 +170,33 @@ export default function MapPage() {
       matches.filter((m) => m.airport.isTechnicalPoint).map((m) => [m.key, m.airport])
     );
   }, [airports, networkUsage]);
+
+  // NOUVEAU : charge les points techniques locaux depuis l'API dès qu'un
+  // aéroport est zoomé (cache géré dans le hook, pas de rechargement
+  // inutile si déjà chargé une première fois).
+  useEffect(() => {
+    if (zoomedLocalAirportKey) {
+      ensureLocalTechnicalPointsLoaded(zoomedLocalAirportKey);
+    }
+  }, [zoomedLocalAirportKey, ensureLocalTechnicalPointsLoaded]);
+
+  const pointsForZoomedAirport = useMemo(
+    () =>
+      zoomedLocalAirportKey
+        ? localTechnicalPoints.filter((p) => p.parentAirportKey === zoomedLocalAirportKey)
+        : [],
+    [localTechnicalPoints, zoomedLocalAirportKey]
+  );
+
+  const selectedLocalPoint = useMemo(
+    () => localTechnicalPoints.find((p) => p.id === selectedLocalPointId) || null,
+    [localTechnicalPoints, selectedLocalPointId]
+  );
+
+  const closePendingPoint = useCallback(() => {
+    setPendingPointCoords(null);
+    setNewPointName('');
+  }, []);
 
   const handleAirportMarkerClick = (key: string) => {
     if (linkingState) {
@@ -137,7 +213,7 @@ export default function MapPage() {
         return;
       }
       addAirportToLocalNetwork(key);
-      setLocalNetworkAirportKey(key);
+      setZoomedLocalAirportKey(key);
       return;
     }
 
@@ -181,6 +257,7 @@ export default function MapPage() {
           itemTitle: l.itemTitle,
           fromName: from.name,
           toName: to.name,
+          bidirectional: l.bidirectional,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
@@ -207,16 +284,6 @@ export default function MapPage() {
     return { link, from, to };
   }, [selectedLinkId, links, airports]);
 
-  const localNetworkAirport = useMemo(() => {
-    if (!localNetworkAirportKey) return null;
-    const airport = airports[localNetworkAirportKey];
-    if (!airport) return null;
-    return { key: localNetworkAirportKey, airport };
-  }, [localNetworkAirportKey, airports]);
-
-  // ─── Chargement initial / erreur réseau ─────────────────────────────────
-  // Ajouté : le hook charge maintenant les données depuis le backend, ce
-  // qui n'est plus instantané comme avec l'ancien état en mémoire.
   if (isLoading) {
     return (
       <div className="map-page map-page--loading">
@@ -249,7 +316,9 @@ export default function MapPage() {
             setSelectedLinkId(null);
             setLinkManager(null);
             setNodeManager(null);
-            setLocalNetworkAirportKey(null);
+            setZoomedLocalAirportKey(null);
+            setSelectedLocalPointId(null);
+            setAddingLocalPointMode(false);
           }}
           onNetworkSubItemClick={handleNetworkSubItemClick}
           activeNetworkUsage={networkUsage}
@@ -260,14 +329,17 @@ export default function MapPage() {
           onAddAirportToLocalNetwork={addAirportToLocalNetwork}
           onRemoveAirportFromLocalNetwork={(key) => {
             removeAirportFromLocalNetwork(key);
-            if (localNetworkAirportKey === key) setLocalNetworkAirportKey(null);
+            if (zoomedLocalAirportKey === key) {
+              setZoomedLocalAirportKey(null);
+              setSelectedLocalPointId(null);
+            }
           }}
           onSelectAirportForLocal={(key) => {
             if (!canAccessNetworkSettings) {
               showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
               return;
             }
-            setLocalNetworkAirportKey(key);
+            setZoomedLocalAirportKey(key);
           }}
           onAddLinkClick={(category, subItem) => setLinkManager({ category, subItem, mode: 'add' })}
           onRemoveLinkClick={(category, subItem) => setLinkManager({ category, subItem, mode: 'remove' })}
@@ -287,11 +359,40 @@ export default function MapPage() {
             </div>
           )}
 
+          {zoomedLocalAirportKey && airports[zoomedLocalAirportKey] && (
+            <div className="linking-banner">
+              <span>
+                Vue locale : <strong>{airports[zoomedLocalAirportKey].name}</strong>
+                {addingLocalPointMode && ' — Cliquez sur la carte pour placer le point'}
+              </span>
+              {isAdmin && !addingLocalPointMode && (
+                <button className="sidebar-action-btn" onClick={() => setAddingLocalPointMode(true)}>
+                  <Plus size={12} /> Ajouter un point technique
+                </button>
+              )}
+              {addingLocalPointMode && (
+                <button className="linking-banner-cancel" onClick={() => setAddingLocalPointMode(false)}>
+                  Annuler
+                </button>
+              )}
+              <button
+                className="linking-banner-cancel"
+                onClick={() => {
+                  setZoomedLocalAirportKey(null);
+                  setSelectedLocalPointId(null);
+                  setAddingLocalPointMode(false);
+                }}
+              >
+                Retour à la vue générale
+              </button>
+            </div>
+          )}
+
           <MapContainer
             {...({
-              center: centerMadagascar,
-              zoom: 6,
-              minZoom: 3,
+              center: MADAGASCAR_CENTER,
+              zoom: DEFAULT_ZOOM,
+              minZoom: MIN_ZOOM,
               worldCopyJump: false,
               maxBounds: WORLD_BOUNDS,
               maxBoundsViscosity: 1.0,
@@ -312,7 +413,22 @@ export default function MapPage() {
               } as any)}
             />
 
-            {(activeModule === 'aeroport' || activeModule === 'reseauLocal') &&
+            <LocalAirportZoomController
+              targetCoords={
+                zoomedLocalAirportKey ? airports[zoomedLocalAirportKey]?.coords ?? null : null
+              }
+            />
+
+            <LocalPointClickCatcher
+              active={addingLocalPointMode}
+              onPick={(coords) => {
+                setPendingPointCoords(coords);
+                setAddingLocalPointMode(false);
+              }}
+            />
+
+            {(activeModule === 'aeroport' ||
+              (activeModule === 'reseauLocal' && !zoomedLocalAirportKey)) &&
               Object.entries(airports)
                 .filter(([, a]) => !a.isTechnicalPoint)
                 .map(([key, airport]) => (
@@ -320,13 +436,31 @@ export default function MapPage() {
                     key={key}
                     airport={airport}
                     onClick={() => handleAirportMarkerClick(key)}
-                    isSelected={
-                      activeModule === 'reseauLocal'
-                        ? localNetworkAirportKey === key
-                        : selectedAirportKey === key
-                    }
+                    isSelected={selectedAirportKey === key}
                   />
                 ))}
+
+            {zoomedLocalAirportKey && airports[zoomedLocalAirportKey] && (
+              <AirportMarker
+                airport={airports[zoomedLocalAirportKey]}
+                onClick={() => undefined}
+                isSelected
+              />
+            )}
+            {zoomedLocalAirportKey &&
+              pointsForZoomedAirport.map((point) => (
+                <AirportMarker
+                  key={point.id}
+                  airport={{
+                    name: point.name,
+                    iata: '',
+                    coords: point.coords,
+                    sections: { sfa: [], sma: [], srna: [] },
+                  }}
+                  onClick={() => setSelectedLocalPointId(point.id)}
+                  isSelected={selectedLocalPointId === point.id}
+                />
+              ))}
 
             {Object.entries(relevantTechnicalNodes).map(([key, airport]) => (
               <AirportMarker
@@ -346,6 +480,7 @@ export default function MapPage() {
                   weight={4}
                   fromName={conn.fromName}
                   toName={conn.toName}
+                  bidirectional={conn.bidirectional}
                   onClick={() => openLinkDetail(conn.id)}
                 />
               ))}
@@ -428,24 +563,71 @@ export default function MapPage() {
         />
       )}
 
-      {localNetworkAirport && (
+      {selectedLocalPoint && (
         <LocalNetworkModal
-          airport={localNetworkAirport.airport}
-          localParameters={localNetworkAirport.airport.localParameters || []}
+          airport={{
+            name: selectedLocalPoint.name,
+            iata: '',
+            coords: selectedLocalPoint.coords,
+            sections: { sfa: [], sma: [], srna: [] },
+          }}
+          localParameters={selectedLocalPoint.localParameters}
           isAdmin={isAdmin}
-          onClose={() => setLocalNetworkAirportKey(null)}
-          onAddParameter={(name) => addAirportLocalParameter(localNetworkAirport.key, name)}
+          onClose={() => setSelectedLocalPointId(null)}
+          onAddParameter={(name) => addLocalTechnicalPointParameter(selectedLocalPoint.id, name)}
           onDeleteParameter={(paramId) =>
-            deleteAirportLocalParameter(localNetworkAirport.key, paramId)
+            deleteLocalTechnicalPointParameter(selectedLocalPoint.id, paramId)
           }
           onAddValue={(paramId, name, text) =>
-            addAirportLocalParameterValue(localNetworkAirport.key, paramId, name, text)
+            addLocalTechnicalPointParameterValue(selectedLocalPoint.id, paramId, name, text)
           }
           onDeleteValue={(paramId, valueId) =>
-            deleteAirportLocalParameterValue(localNetworkAirport.key, paramId, valueId)
+            deleteLocalTechnicalPointParameterValue(selectedLocalPoint.id, paramId, valueId)
           }
         />
       )}
+
+      <Modal
+        isOpen={Boolean(pendingPointCoords)}
+        onClose={closePendingPoint}
+        title="Nouveau point technique"
+        size="sm"
+        footer={
+          <div className="modal-footer-actions">
+            <button className="btn btn-secondary" onClick={closePendingPoint}>
+              Annuler
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={!newPointName.trim()}
+              onClick={async () => {
+                if (zoomedLocalAirportKey && pendingPointCoords) {
+                  const newId = await addLocalTechnicalPoint(
+                    zoomedLocalAirportKey,
+                    newPointName.trim(),
+                    pendingPointCoords
+                  );
+                  if (newId) setSelectedLocalPointId(newId);
+                }
+                closePendingPoint();
+              }}
+            >
+              Créer
+            </button>
+          </div>
+        }
+      >
+        <div className="form-group text-left">
+          <label className="form-label">Nom du point</label>
+          <input
+            className="form-input"
+            autoFocus
+            value={newPointName}
+            onChange={(e) => setNewPointName(e.target.value)}
+            placeholder="ex: Groupe électrogène nord"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

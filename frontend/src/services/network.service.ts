@@ -1,10 +1,9 @@
 // services/network.service.ts
 //
-// NOUVEAU FICHIER : couche d'accès à l'API pour tout ce qui concerne la
-// carte (aéroports, points techniques, items sfa/sma/srna, sous-paramètres,
-// liaisons, paramètres de liaison, informations locales). Sépare ces
-// endpoints de api.service.ts (qui reste dédié à l'auth/utilisateurs/admin)
-// pour rester lisible. Réutilise le même wrapper `request()`.
+// MODIFIÉ : ajout de `bidirectional` sur linkService.create() (cf.
+// LinkManagerModal.tsx) et ajout de `localPointService`, nouveau bloc
+// couvrant les endpoints /local-points/... (points techniques locaux du
+// module Réseau local, backend routers/local_points.py).
 import { request } from './api.service';
 import type { Airport, Parameter, ParameterValue } from '../types';
 import type { NetworkCategoryKey, NetworkLink } from '../data/networkCategories';
@@ -20,9 +19,6 @@ export interface AirportSummary {
   inLocalNetwork: boolean;
 }
 
-// Le backend renvoie l'aéroport complet SANS sa clé "key" à l'intérieur du
-// corps de sections (elle est dans l'URL / dans l'objet englobant), donc on
-// combine ici { key, ...airportData } pour reconstruire AirportsMap côté hook.
 export interface AirportApiResult extends Airport {
   key: string;
 }
@@ -140,10 +136,20 @@ export const networkService = {
   toggleSubParameterStatus: (subId: string): Promise<NetworkItemApiResult['subParameters'][number]> =>
     request(`/network/sub-parameters/${subId}/toggle-status`, { method: 'PATCH' }),
 
-  getUsage: (category: NetworkCategoryKey, subItem: string) =>
-    request<
-      { key: string; matchedTitle: string; status?: string; airportName: string; airportIata: string }[]
-    >(`/network/usage/${category}/${encodeURIComponent(subItem)}`),
+  getUsage: (category: NetworkCategoryKey, subItem: string): Promise<{
+    key: string;
+    matchedTitle: string;
+    status?: string;
+    airportName: string;
+    airportIata: string;
+  }[]> =>
+    request<{
+      key: string;
+      matchedTitle: string;
+      status?: string;
+      airportName: string;
+      airportIata: string;
+    }[]>(`/network/usage/${category}/${encodeURIComponent(subItem)}`),
 };
 
 // ─── Liaisons (NetworkLink) ───────────────────────────────────────────────
@@ -151,15 +157,19 @@ export const networkService = {
 export const linkService = {
   list: (): Promise<NetworkLink[]> => request<NetworkLink[]>('/links'),
 
+  // MODIFIÉ : ajout du paramètre `bidirectional` (LinkManagerModal.tsx),
+  // par défaut `false` pour ne rien changer aux appels existants (flux
+  // "2 clics" sur la carte, qui n'a jamais fourni ce paramètre).
   create: (
     category: NetworkCategoryKey,
     itemTitle: string,
     fromAirportKey: string,
-    toAirportKey: string
+    toAirportKey: string,
+    bidirectional: boolean = false
   ): Promise<NetworkLink> =>
     request<NetworkLink>('/links', {
       method: 'POST',
-      body: JSON.stringify({ category, itemTitle, fromAirportKey, toAirportKey }),
+      body: JSON.stringify({ category, itemTitle, fromAirportKey, toAirportKey, bidirectional }),
     }),
 
   remove: (linkId: string): Promise<{ message: string }> => request(`/links/${linkId}`, { method: 'DELETE' }),
@@ -181,4 +191,50 @@ export const linkService = {
 
   deleteParameterValue: (valueId: string): Promise<{ message: string }> =>
     request(`/links/parameters/values/${valueId}`, { method: 'DELETE' }),
+};
+
+// ─── Points techniques locaux (NOUVEAU — module Réseau local) ────────────
+// Couvre backend/app/routers/local_points.py (préfixe /local-points).
+
+export interface LocalTechnicalPointApiResult {
+  id: string;
+  parentAirportKey: string;
+  name: string;
+  coords: [number, number];
+  localParameters: Parameter[];
+}
+
+export const localPointService = {
+  list: (airportKey: string): Promise<LocalTechnicalPointApiResult[]> =>
+    request<LocalTechnicalPointApiResult[]>(`/local-points/airport/${encodeURIComponent(airportKey)}`),
+
+  create: (
+    airportKey: string,
+    payload: { name: string; lat: number; lng: number }
+  ): Promise<LocalTechnicalPointApiResult> =>
+    request<LocalTechnicalPointApiResult>(`/local-points/airport/${encodeURIComponent(airportKey)}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  remove: (pointId: string): Promise<{ message: string }> =>
+    request(`/local-points/${pointId}`, { method: 'DELETE' }),
+
+  addParameter: (pointId: string, name: string): Promise<Parameter> =>
+    request<Parameter>(`/local-points/${pointId}/parameters`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  deleteParameter: (paramId: string): Promise<{ message: string }> =>
+    request(`/local-points/parameters/${paramId}`, { method: 'DELETE' }),
+
+  addParameterValue: (paramId: string, name: string, text: string): Promise<ParameterValue> =>
+    request<ParameterValue>(`/local-points/parameters/${paramId}/values`, {
+      method: 'POST',
+      body: JSON.stringify({ name, text }),
+    }),
+
+  deleteParameterValue: (valueId: string): Promise<{ message: string }> =>
+    request(`/local-points/parameters/values/${valueId}`, { method: 'DELETE' }),
 };

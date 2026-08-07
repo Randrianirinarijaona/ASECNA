@@ -162,7 +162,7 @@ export default function NetworkItemModal({
           </div>
         </div>
 
-        <div className="network-modal-body">
+        <div className="network-modal-body network-modal-body--scroll">
           <div className="network-item-detail">
             <div className="network-item-card-top">
               {!hideStatus && <span className={`status-dot status-dot--${editStatus}`} />}

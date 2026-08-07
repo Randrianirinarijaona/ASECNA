@@ -27,12 +27,19 @@ def get_link(db: Session, link_id: str) -> NetworkLink | None:
 
 
 def create_link(
-    db: Session, category: NetworkCategoryEnum, item_title: str, from_key: str, to_key: str
+    db: Session,
+    category: NetworkCategoryEnum,
+    item_title: str,
+    from_key: str,
+    to_key: str,
+    bidirectional: bool = False,
 ) -> NetworkLink:
     """
     Reproduit useAirportsData.addNetworkLink : refuse une liaison vers
     soi-même, et refuse un doublon quel que soit le sens (A->B équivaut à
-    B->A pour un même sous-réseau).
+    B->A pour un même sous-réseau). `bidirectional` est un simple attribut
+    d'affichage (cf. LinkManagerModal.tsx) : il ne crée pas de deuxième
+    ligne en base, juste un indicateur pour dessiner la flèche retour.
     """
     if from_key == to_key:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Impossible de relier un aéroport à lui-même")
@@ -50,7 +57,13 @@ def create_link(
     if existing:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Cette liaison existe déjà")
 
-    link = NetworkLink(category=category, item_title=item_title, from_airport_key=from_key, to_airport_key=to_key)
+    link = NetworkLink(
+        category=category,
+        item_title=item_title,
+        from_airport_key=from_key,
+        to_airport_key=to_key,
+        bidirectional=bidirectional,
+    )
     db.add(link)
     db.commit()
     db.refresh(link)

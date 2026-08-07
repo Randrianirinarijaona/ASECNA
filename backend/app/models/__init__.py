@@ -18,4 +18,9 @@ from app.models.link import (  # noqa: F401
     AirportLocalParameter,
     AirportLocalParameterValue,
 )
+from app.models.local_point import (  # noqa: F401
+    LocalTechnicalPoint,
+    LocalTechnicalPointParameter,
+    LocalTechnicalPointParameterValue,
+)
 from app.models.log import ActivityLog  # noqa: F401

@@ -26,6 +26,7 @@ def _to_link_out(link) -> LinkOut:
         item_title=link.item_title,
         from_airport_key=link.from_airport_key,
         to_airport_key=link.to_airport_key,
+        bidirectional=link.bidirectional,
         parameters=[
             ParameterOut(id=p.id, name=p.name, values=[ParameterValueOut.model_validate(v) for v in p.values])
             for p in link.parameters
@@ -53,7 +54,10 @@ def create_link(
     except ValueError:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Catégorie invalide")
 
-    link = link_crud.create_link(db, category_enum, payload.item_title, payload.from_airport_key, payload.to_airport_key)
+    link = link_crud.create_link(
+        db, category_enum, payload.item_title, payload.from_airport_key, payload.to_airport_key,
+        bidirectional=payload.bidirectional,
+    )
     user_crud.log_activity(
         db, current_user,
         f"Création d'une liaison {payload.item_title} entre {payload.from_airport_key} et {payload.to_airport_key}",

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, users, admin, airports, network_items, network_links
+from app.routers import auth, users, admin, airports, network_items, network_links, local_points
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,6 +24,7 @@ app.include_router(admin.router)
 app.include_router(airports.router)
 app.include_router(network_items.router)
 app.include_router(network_links.router)
+app.include_router(local_points.router)
 
 
 @app.get("/", tags=["Health"])

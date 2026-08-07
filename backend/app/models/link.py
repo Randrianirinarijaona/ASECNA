@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import String, ForeignKey, Enum
+from sqlalchemy import String, ForeignKey, Enum, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -30,6 +30,11 @@ class NetworkLink(Base):
     item_title: Mapped[str] = mapped_column(String(150), nullable=False)
     from_airport_key: Mapped[str] = mapped_column(ForeignKey("airports.key", ondelete="CASCADE"), nullable=False)
     to_airport_key: Mapped[str] = mapped_column(ForeignKey("airports.key", ondelete="CASCADE"), nullable=False)
+    # NOUVEAU (LinkManagerModal.tsx : sélecteur "Unidirectionnelle /
+    # Bidirectionnelle"). false = comportement historique (flèche from -> to
+    # uniquement). true = flèche affichée dans les deux sens côté frontend
+    # (NetworkArrow), sans dupliquer la ligne en base.
+    bidirectional: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     parameters: Mapped[list["LinkParameter"]] = relationship(
         back_populates="link", cascade="all, delete-orphan"

@@ -11,6 +11,9 @@ interface NetworkArrowProps {
   onClick?: () => void;
   fromName?: string;
   toName?: string;
+  // NOUVEAU : quand true, une seconde flèche est dessinée en sens inverse
+  // pour représenter une liaison bidirectionnelle.
+  bidirectional?: boolean;
 }
 
 function escapeHtml(value: string): string {
@@ -25,10 +28,11 @@ function escapeHtml(value: string): string {
 export default function NetworkArrow({
   positions,
   color = '#2563eb',
-  weight = 4, // Légèrement affiné pour un rendu plus premium
+  weight = 4,
   onClick,
   fromName,
   toName,
+  bidirectional = false,
 }: NetworkArrowProps) {
   const map = useMap();
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -51,11 +55,11 @@ export default function NetworkArrow({
     const decorator = L.polylineDecorator(polyline, {
       patterns: [
         {
-          offset: '55%', // Centré élégamment sur le segment
+          offset: '55%',
           repeat: 0,
           symbol: L.Symbol.arrowHead({
             pixelSize: 14,
-            polygon: true, // Flèche pleine moderne
+            polygon: true,
             pathOptions: {
               stroke: false,
               fill: true,
@@ -70,12 +74,42 @@ export default function NetworkArrow({
     polyline.addTo(map);
     decorator.addTo(map);
 
+    // NOUVEAU : flèche retour (liaison bidirectionnelle). Basée sur une
+    // polyligne inversée (non ajoutée à la carte, uniquement utilisée pour
+    // calculer la géométrie du décorateur), ce qui produit une pointe de
+    // flèche orientée dans le sens opposé, positionnée symétriquement.
+    let reverseDecorator: any = null;
+    if (bidirectional) {
+      const reversedLine = L.polyline([...positions].reverse());
+      reverseDecorator = L.polylineDecorator(reversedLine, {
+        patterns: [
+          {
+            offset: '55%',
+            repeat: 0,
+            symbol: L.Symbol.arrowHead({
+              pixelSize: 14,
+              polygon: true,
+              pathOptions: {
+                stroke: false,
+                fill: true,
+                fillColor: color,
+                fillOpacity: 1,
+              },
+            }),
+          },
+        ],
+      });
+      reverseDecorator.addTo(map);
+    }
+
     let label: L.Marker | null = null;
 
     if (fromName && toName) {
       const midLat = (start.lat + end.lat) / 2;
       const midLng = (start.lng + end.lng) / 2;
-      const labelText = `${escapeHtml(fromName)} &rarr; ${escapeHtml(toName)}`;
+      const labelText = bidirectional
+        ? `${escapeHtml(fromName)} &harr; ${escapeHtml(toName)}`
+        : `${escapeHtml(fromName)} &rarr; ${escapeHtml(toName)}`;
 
       label = L.marker([midLat, midLng], {
         icon: L.divIcon({
@@ -122,8 +156,8 @@ export default function NetworkArrow({
     if (onClick) {
       polyline.on('click', onClick);
       decorator.on('click', onClick);
-      
-      // Feedback visuel au survol
+      if (reverseDecorator) reverseDecorator.on('click', onClick);
+
       polyline.on('mouseover', () => polyline.setStyle({ opacity: 1, weight: weight + 2 }));
       polyline.on('mouseout', () => polyline.setStyle({ opacity: 0.85, weight }));
     }
@@ -131,11 +165,12 @@ export default function NetworkArrow({
     return () => {
       map.removeLayer(polyline);
       map.removeLayer(decorator);
+      if (reverseDecorator) map.removeLayer(reverseDecorator);
       if (label) map.removeLayer(label);
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [positions, color, weight, onClick, fromName, toName, map]);
+  }, [positions, color, weight, onClick, fromName, toName, bidirectional, map]);
 
   return null;
 }

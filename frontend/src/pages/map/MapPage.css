@@ -95,3 +95,5 @@
   justify-content: center;
   height: 100vh;
 }
+
+.linking-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
