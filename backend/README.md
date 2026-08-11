@@ -12,7 +12,7 @@ python -m venv venv
 # Windows :
 venv\Scripts\activate
 # macOS/Linux :
-source venv/bin/activate
+source venv/bin/activate ou venv\Scripts\Activate
 
 pip install -r requirements.txt
 cp .env.example .env   # puis ajustez DB_PASSWORD / SECRET_KEY si besoin

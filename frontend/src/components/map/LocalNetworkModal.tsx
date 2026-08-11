@@ -1,8 +1,9 @@
 // components/map/LocalNetworkModal.tsx
-// Informations locales d'UN aéroport réel. Fonctionne exactement comme
-// LinkDetailModal (paramètres de liaison) : un paramètre = un nom + une
-// liste de valeurs nommées, sans notion de statut. Totalement indépendant
-// des liaisons (NetworkLink) et des sections réseau (sfa/sma/srna).
+// Informations locales d'UN aéroport réel OU d'un point technique local.
+// Fonctionne exactement comme LinkDetailModal (paramètres de liaison) : un
+// paramètre = un nom + une liste de valeurs nommées, sans notion de statut.
+// Totalement indépendant des liaisons (NetworkLink) et des sections réseau
+// (sfa/sma/srna).
 
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
@@ -19,6 +20,10 @@ interface LocalNetworkModalProps {
   onDeleteParameter: (paramId: string) => void;
   onAddValue: (paramId: string, name: string, text: string) => void;
   onDeleteValue: (paramId: string, valueId: string) => void;
+  // NOUVEAU : suppression de l'entité elle-même (point technique local).
+  // Optionnel — si absent, aucun bouton de suppression n'est affiché
+  // (comportement inchangé pour tout appelant qui ne le fournit pas).
+  onDelete?: () => void;
 }
 
 export default function LocalNetworkModal({
@@ -30,6 +35,7 @@ export default function LocalNetworkModal({
   onDeleteParameter,
   onAddValue,
   onDeleteValue,
+  onDelete,
 }: LocalNetworkModalProps) {
   const [newParamName, setNewParamName] = useState('');
   const [showAddParam, setShowAddParam] = useState(false);
@@ -65,6 +71,18 @@ export default function LocalNetworkModal({
             <p className="network-modal-subtitle">Informations locales</p>
           </div>
           <div className="network-modal-header-actions">
+            {/* NOUVEAU : bouton de suppression du point technique local,
+                réutilise exactement le style/emplacement du bouton
+                "Supprimer cet aéroport" de NetworkModal.tsx. */}
+            {isAdmin && onDelete && (
+              <button
+                className="icon-btn icon-btn--danger"
+                title="Supprimer ce point technique"
+                onClick={onDelete}
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button className="icon-btn" title="Fermer" onClick={onClose}>
               <X size={18} />
             </button>

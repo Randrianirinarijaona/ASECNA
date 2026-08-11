@@ -55,7 +55,7 @@ export default function NetworkArrow({
     const decorator = L.polylineDecorator(polyline, {
       patterns: [
         {
-          offset: '55%',
+          offset: '65%',
           repeat: 0,
           symbol: L.Symbol.arrowHead({
             pixelSize: 14,
@@ -84,7 +84,7 @@ export default function NetworkArrow({
       reverseDecorator = L.polylineDecorator(reversedLine, {
         patterns: [
           {
-            offset: '55%',
+            offset: '65%',
             repeat: 0,
             symbol: L.Symbol.arrowHead({
               pixelSize: 14,

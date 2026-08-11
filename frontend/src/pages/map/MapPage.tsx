@@ -117,6 +117,8 @@ export default function MapPage() {
     localTechnicalPoints,
     ensureLocalTechnicalPointsLoaded,
     addLocalTechnicalPoint,
+    // NOUVEAU : nécessaire pour le bouton de suppression d'un point.
+    deleteLocalTechnicalPoint,
     addLocalTechnicalPointParameter,
     deleteLocalTechnicalPointParameter,
     addLocalTechnicalPointParameterValue,
@@ -171,9 +173,6 @@ export default function MapPage() {
     );
   }, [airports, networkUsage]);
 
-  // NOUVEAU : charge les points techniques locaux depuis l'API dès qu'un
-  // aéroport est zoomé (cache géré dans le hook, pas de rechargement
-  // inutile si déjà chargé une première fois).
   useEffect(() => {
     if (zoomedLocalAirportKey) {
       ensureLocalTechnicalPointsLoaded(zoomedLocalAirportKey);
@@ -574,6 +573,11 @@ export default function MapPage() {
           localParameters={selectedLocalPoint.localParameters}
           isAdmin={isAdmin}
           onClose={() => setSelectedLocalPointId(null)}
+          // NOUVEAU : suppression du point technique local lui-même.
+          onDelete={() => {
+            deleteLocalTechnicalPoint(selectedLocalPoint.id);
+            setSelectedLocalPointId(null);
+          }}
           onAddParameter={(name) => addLocalTechnicalPointParameter(selectedLocalPoint.id, name)}
           onDeleteParameter={(paramId) =>
             deleteLocalTechnicalPointParameter(selectedLocalPoint.id, paramId)
