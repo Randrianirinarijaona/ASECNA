@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
 import { Plus } from 'lucide-react';
@@ -73,7 +74,7 @@ function LocalPointClickCatcher({
   onPick: (coords: [number, number]) => void;
 }) {
   useMapEvents({
-    click(e) {
+    click(e: LeafletMouseEvent) {
       if (!active) return;
       onPick([e.latlng.lat, e.latlng.lng]);
     },
@@ -87,6 +88,8 @@ export default function MapPage() {
   const { resolvedTheme } = useTheme();
 
   const isAdmin = user?.role === 'admin';
+  // Rôle 'user' = lecture seule stricte : pas d'écriture sur le réseau, et
+  // (MODIFIÉ) plus aucun accès au module "Réseau local" lui-même.
   const canAccessNetworkSettings = user?.role !== 'user';
 
   const {
@@ -113,11 +116,9 @@ export default function MapPage() {
     localNetworkAirportKeys,
     addAirportToLocalNetwork,
     removeAirportFromLocalNetwork,
-    // Points techniques locaux
     localTechnicalPoints,
     ensureLocalTechnicalPointsLoaded,
     addLocalTechnicalPoint,
-    // NOUVEAU : nécessaire pour le bouton de suppression d'un point.
     deleteLocalTechnicalPoint,
     addLocalTechnicalPointParameter,
     deleteLocalTechnicalPointParameter,
@@ -283,6 +284,18 @@ export default function MapPage() {
     return { link, from, to };
   }, [selectedLinkId, links, airports]);
 
+  // NOUVEAU : garde-fou défensif. Si le rôle change (ou si l'état a été
+  // manipulé) alors que la vue "Réseau local" est encore active pour un
+  // rôle désormais restreint, on la referme automatiquement.
+  useEffect(() => {
+    if (!canAccessNetworkSettings && activeModule === 'reseauLocal') {
+      setActiveModule(null);
+      setZoomedLocalAirportKey(null);
+      setSelectedLocalPointId(null);
+      setAddingLocalPointMode(false);
+    }
+  }, [canAccessNetworkSettings, activeModule]);
+
   if (isLoading) {
     return (
       <div className="map-page map-page--loading">
@@ -323,6 +336,8 @@ export default function MapPage() {
           activeNetworkUsage={networkUsage}
           isAdmin={isAdmin}
           onAddAirportClick={() => setShowAddAirport(true)}
+          // NOUVEAU : masque entièrement l'entrée "Réseau local" pour le rôle 'user'.
+          canAccessLocalNetwork={canAccessNetworkSettings}
           airports={airports}
           localNetworkAirportKeys={localNetworkAirportKeys}
           onAddAirportToLocalNetwork={addAirportToLocalNetwork}
@@ -573,7 +588,6 @@ export default function MapPage() {
           localParameters={selectedLocalPoint.localParameters}
           isAdmin={isAdmin}
           onClose={() => setSelectedLocalPointId(null)}
-          // NOUVEAU : suppression du point technique local lui-même.
           onDelete={() => {
             deleteLocalTechnicalPoint(selectedLocalPoint.id);
             setSelectedLocalPointId(null);

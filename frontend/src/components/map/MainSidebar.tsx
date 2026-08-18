@@ -27,6 +27,12 @@ interface MainSidebarProps {
   isAdmin: boolean;
   onAddAirportClick: () => void;
 
+  // NOUVEAU : contrôle l'affichage de l'entrée "Réseau local" elle-même.
+  // Le rôle 'user' (lecture seule stricte) n'a plus accès à ce module du
+  // tout — le bouton et sa section ne sont pas rendus. Les autres modules
+  // (Aéroport, Liaison) restent inchangés.
+  canAccessLocalNetwork: boolean;
+
   // Réseau local : tous les vrais aéroports (pour le picker "Ajouter un
   // aéroport"), la liste de ceux déjà suivis, et les actions associées.
   airports: AirportsMap;
@@ -48,6 +54,7 @@ export default function MainSidebar({
   activeNetworkUsage,
   isAdmin,
   onAddAirportClick,
+  canAccessLocalNetwork,
   airports,
   localNetworkAirportKeys,
   onAddAirportToLocalNetwork,
@@ -182,16 +189,20 @@ export default function MainSidebar({
           </div>
         )}
 
-        <button
-          className={`main-sidebar-btn ${activeModule === 'reseauLocal' ? 'main-sidebar-btn--active' : ''}`}
-          onClick={() => handleModuleClick('reseauLocal')}
-        >
-          <RadioTower size={18} />
-          <span>Réseau local</span>
-        </button>
+        {/* MODIFIÉ : le bouton "Réseau local" (et donc tout le module) n'est
+            plus rendu pour le rôle 'user' (lecture seule stricte). */}
+        {canAccessLocalNetwork && (
+          <button
+            className={`main-sidebar-btn ${activeModule === 'reseauLocal' ? 'main-sidebar-btn--active' : ''}`}
+            onClick={() => handleModuleClick('reseauLocal')}
+          >
+            <RadioTower size={18} />
+            <span>Réseau local</span>
+          </button>
+        )}
       </nav>
 
-      {activeModule === 'reseauLocal' && (
+      {canAccessLocalNetwork && activeModule === 'reseauLocal' && (
         <div className="main-sidebar-section">
           {isAdmin && (
             <button
