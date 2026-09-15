@@ -1,12 +1,11 @@
 from typing import Optional
 
+from app.models.link import LinkDirectionEnum, LinkStatusEnum
 from app.schemas.base import CamelModel
 from app.schemas.network import NetworkItemOut
 
 
 # ─── Paramètres nommés génériques (liaisons ET infos locales) ──────────
-# Reproduit fidèlement Parameter / ParameterValue de types.ts, réutilisé
-# tel quel par NetworkLink.parameters et Airport.localParameters.
 
 class ParameterValueOut(CamelModel):
     id: str
@@ -32,8 +31,7 @@ class ParameterCreate(CamelModel):
 # ─── Aéroport ────────────────────────────────────────────────────────────
 
 class AirportCreate(CamelModel):
-    """Correspond au payload envoyé par AddAirportModal.tsx (onSubmit)."""
-    key: str  # code IATA saisi, utilisé comme clé primaire
+    key: str
     name: str
     iata: str
     lat: float
@@ -41,7 +39,6 @@ class AirportCreate(CamelModel):
 
 
 class TechnicalPointCreate(CamelModel):
-    """Correspond au payload de NetworkNodeModal.tsx (mode 'add')."""
     name: str
     lat: float
     lng: float
@@ -59,7 +56,6 @@ class AirportOut(CamelModel):
 
 
 class AirportSummaryOut(CamelModel):
-    """Version allégée utilisée pour les listes (markers, pickers)."""
     key: str
     name: str
     iata: str
@@ -71,13 +67,30 @@ class AirportSummaryOut(CamelModel):
 # ─── Liaisons (NetworkLink) ──────────────────────────────────────────────
 
 class LinkCreate(CamelModel):
+    """
+    MODIFIÉ :
+    - `from_airport_key` doit être l'aéroport d'Antananarivo (vérifié dans
+      crud/link.py::create_link) ; le champ reste présent (plutôt que
+      supprimé) pour que le backend reste la source de vérité de cette
+      règle même si un client mal formé l'omettait ou la contournait.
+    - `bidirectional` (bool) est remplacé par `direction`.
+    - Nouveaux champs : `link_type`/`circuit` (facultatifs, valeur par
+      défaut None), `ip_address`/`port` (obligatoires, non optionnels).
+    """
     category: str
     item_title: str
     from_airport_key: str
     to_airport_key: str
-    # NOUVEAU : cf. LinkManagerModal.tsx (sélecteur "Unidirectionnelle /
-    # Bidirectionnelle"). Par défaut False = comportement historique.
-    bidirectional: bool = False
+    direction: LinkDirectionEnum = LinkDirectionEnum.outgoing
+    link_type: Optional[str] = None
+    circuit: Optional[str] = None
+    ip_address: str
+    port: str
+
+
+class LinkStatusUpdate(CamelModel):
+    """Payload de PATCH /links/{id}/status (LinkDetailModal.tsx, admin uniquement)."""
+    status: LinkStatusEnum
 
 
 class LinkOut(CamelModel):
@@ -86,5 +99,10 @@ class LinkOut(CamelModel):
     item_title: str
     from_airport_key: str
     to_airport_key: str
-    bidirectional: bool = False
+    direction: LinkDirectionEnum
+    link_type: Optional[str] = None
+    circuit: Optional[str] = None
+    ip_address: Optional[str] = None
+    port: Optional[str] = None
+    status: LinkStatusEnum
     parameters: list[ParameterOut] = []

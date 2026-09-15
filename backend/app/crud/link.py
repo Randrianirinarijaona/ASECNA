@@ -2,8 +2,10 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, or_, and_
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.models.link import (
     NetworkLink,
+    LinkDirectionEnum,
     LinkParameter,
     LinkParameterValue,
     AirportLocalParameter,
@@ -32,15 +34,26 @@ def create_link(
     item_title: str,
     from_key: str,
     to_key: str,
-    bidirectional: bool = False,
+    direction: LinkDirectionEnum = LinkDirectionEnum.outgoing,
+    link_type: str | None = None,
+    circuit: str | None = None,
+    ip_address: str = "",
+    port: str = "",
 ) -> NetworkLink:
     """
-    Reproduit useAirportsData.addNetworkLink : refuse une liaison vers
-    soi-même, et refuse un doublon quel que soit le sens (A->B équivaut à
-    B->A pour un même sous-réseau). `bidirectional` est un simple attribut
-    d'affichage (cf. LinkManagerModal.tsx) : il ne crée pas de deuxième
-    ligne en base, juste un indicateur pour dessiner la flèche retour.
+    Reproduit useAirportsData.addNetworkLink (refuse une liaison vers
+    soi-même, refuse un doublon quel que soit le sens) et ajoute :
+    - la contrainte "point de départ = Antananarivo" (règle métier
+      demandée), vérifiée ici pour que le backend reste la source de
+      vérité même si un client contournait la restriction d'UI ;
+    - les nouveaux champs direction/type/circuit/ip/port.
     """
+    if from_key != settings.ANTANANARIVO_AIRPORT_KEY:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"Toute liaison doit obligatoirement partir d'Antananarivo ({settings.ANTANANARIVO_AIRPORT_KEY}).",
+        )
+
     if from_key == to_key:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Impossible de relier un aéroport à lui-même")
 
@@ -62,9 +75,21 @@ def create_link(
         item_title=item_title,
         from_airport_key=from_key,
         to_airport_key=to_key,
-        bidirectional=bidirectional,
+        direction=direction,
+        link_type=link_type,
+        circuit=circuit,
+        ip_address=ip_address,
+        port=port,
     )
     db.add(link)
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def update_status(db: Session, link: NetworkLink, new_status: str) -> NetworkLink:
+    """NOUVEAU : modification de l'état d'une liaison (LinkDetailModal.tsx, admin)."""
+    link.status = new_status
     db.commit()
     db.refresh(link)
     return link
@@ -76,7 +101,6 @@ def delete_link(db: Session, link: NetworkLink) -> None:
 
 
 def delete_links_for_item(db: Session, category: NetworkCategoryEnum, item_title: str, airport_key: str) -> None:
-    """Appelé quand un NetworkItem est supprimé (cf. crud/network.py::delete_item)."""
     links = db.scalars(
         select(NetworkLink).where(
             NetworkLink.category == category,
@@ -89,7 +113,7 @@ def delete_links_for_item(db: Session, category: NetworkCategoryEnum, item_title
     db.commit()
 
 
-# ─── Paramètres de liaison ────────────────────────────────────────────────
+# ─── Paramètres de liaison (inchangé) ────────────────────────────────────
 
 def add_link_parameter(db: Session, link: NetworkLink, name: str) -> LinkParameter:
     param = LinkParameter(link_id=link.id, name=name)
@@ -125,7 +149,7 @@ def delete_link_parameter_value(db: Session, value: LinkParameterValue) -> None:
     db.commit()
 
 
-# ─── Paramètres locaux d'un aéroport (module "Réseau local") ────────────
+# ─── Paramètres locaux d'un aéroport (inchangé) ──────────────────────────
 
 def add_local_parameter(db: Session, airport_key: str, name: str) -> AirportLocalParameter:
     param = AirportLocalParameter(airport_key=airport_key, name=name)
@@ -144,9 +168,7 @@ def delete_local_parameter(db: Session, param: AirportLocalParameter) -> None:
     db.commit()
 
 
-def add_local_parameter_value(
-    db: Session, param: AirportLocalParameter, name: str, text: str
-) -> AirportLocalParameterValue:
+def add_local_parameter_value(db: Session, param: AirportLocalParameter, name: str, text: str) -> AirportLocalParameterValue:
     value = AirportLocalParameterValue(parameter_id=param.id, name=name, text=text)
     db.add(value)
     db.commit()

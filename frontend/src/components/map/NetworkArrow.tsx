@@ -3,6 +3,8 @@ import { useMap } from 'react-leaflet';
 // @ts-ignore: Missing type definitions for leaflet
 import L from 'leaflet';
 import 'leaflet-polylinedecorator';
+import { LINK_STATUS_LABELS } from '../../data/networkCategories';
+import type { LinkDirection, LinkStatus } from '../../data/networkCategories';
 
 interface NetworkArrowProps {
   positions: [number, number][];
@@ -11,9 +13,12 @@ interface NetworkArrowProps {
   onClick?: () => void;
   fromName?: string;
   toName?: string;
-  // NOUVEAU : quand true, une seconde flèche est dessinée en sens inverse
-  // pour représenter une liaison bidirectionnelle.
-  bidirectional?: boolean;
+  // MODIFIÉ : remplace l'ancien booléen `bidirectional` par une direction à
+  // 3 valeurs. Par défaut 'sortant' = comportement historique (flèche
+  // from -> to uniquement).
+  direction?: LinkDirection;
+  // NOUVEAU : état de la liaison, affecte le style du trait.
+  status?: LinkStatus;
 }
 
 function escapeHtml(value: string): string {
@@ -32,7 +37,8 @@ export default function NetworkArrow({
   onClick,
   fromName,
   toName,
-  bidirectional = false,
+  direction = 'sortant',
+  status = 'operational',
 }: NetworkArrowProps) {
   const map = useMap();
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -43,62 +49,50 @@ export default function NetworkArrow({
     const start = L.latLng(positions[0]);
     const end = L.latLng(positions[positions.length - 1]);
 
+    // NOUVEAU : le statut influence le style du trait (hors service = gris,
+    // maintenance = pointillé, opérationnel = rendu historique).
+    const effectiveColor = status === 'out_of_service' ? '#94a3b8' : color;
+    const dashArray = status === 'operational' ? undefined : '8 6';
+    const baseOpacity = status === 'operational' ? 0.85 : 0.6;
+
     const polyline = L.polyline(positions, {
-      color,
+      color: effectiveColor,
       weight,
-      opacity: 0.85,
+      opacity: baseOpacity,
       lineCap: 'round',
       lineJoin: 'round',
-      className: 'leaflet-network-polyline'
+      dashArray,
+      className: 'leaflet-network-polyline',
     });
 
-    const decorator = L.polylineDecorator(polyline, {
-      patterns: [
-        {
-          offset: '65%',
-          repeat: 0,
-          symbol: L.Symbol.arrowHead({
-            pixelSize: 14,
-            polygon: true,
-            pathOptions: {
-              stroke: false,
-              fill: true,
-              fillColor: color,
-              fillOpacity: 1,
-            },
-          }),
-        },
-      ],
+    const arrowSymbol = (pathColor: string) => ({
+      offset: '55%',
+      repeat: 0,
+      symbol: L.Symbol.arrowHead({
+        pixelSize: 14,
+        polygon: true,
+        pathOptions: { stroke: false, fill: true, fillColor: pathColor, fillOpacity: 1 },
+      }),
     });
+
+    // 'sortant' -> flèche dans le sens du tracé (Antananarivo -> aéroport).
+    // 'entrant' -> flèche dans le sens inverse (aéroport -> Antananarivo).
+    // 'entrant_sortant' -> les deux.
+    const showForwardArrow = direction === 'sortant' || direction === 'entrant_sortant';
+    const showReverseArrow = direction === 'entrant' || direction === 'entrant_sortant';
+
+    let forwardDecorator: any = null;
+    let reverseDecorator: any = null;
 
     polyline.addTo(map);
-    decorator.addTo(map);
 
-    // NOUVEAU : flèche retour (liaison bidirectionnelle). Basée sur une
-    // polyligne inversée (non ajoutée à la carte, uniquement utilisée pour
-    // calculer la géométrie du décorateur), ce qui produit une pointe de
-    // flèche orientée dans le sens opposé, positionnée symétriquement.
-    let reverseDecorator: any = null;
-    if (bidirectional) {
+    if (showForwardArrow) {
+      forwardDecorator = L.polylineDecorator(polyline, { patterns: [arrowSymbol(effectiveColor)] });
+      forwardDecorator.addTo(map);
+    }
+    if (showReverseArrow) {
       const reversedLine = L.polyline([...positions].reverse());
-      reverseDecorator = L.polylineDecorator(reversedLine, {
-        patterns: [
-          {
-            offset: '65%',
-            repeat: 0,
-            symbol: L.Symbol.arrowHead({
-              pixelSize: 14,
-              polygon: true,
-              pathOptions: {
-                stroke: false,
-                fill: true,
-                fillColor: color,
-                fillOpacity: 1,
-              },
-            }),
-          },
-        ],
-      });
+      reverseDecorator = L.polylineDecorator(reversedLine, { patterns: [arrowSymbol(effectiveColor)] });
       reverseDecorator.addTo(map);
     }
 
@@ -107,9 +101,13 @@ export default function NetworkArrow({
     if (fromName && toName) {
       const midLat = (start.lat + end.lat) / 2;
       const midLng = (start.lng + end.lng) / 2;
-      const labelText = bidirectional
-        ? `${escapeHtml(fromName)} &harr; ${escapeHtml(toName)}`
-        : `${escapeHtml(fromName)} &rarr; ${escapeHtml(toName)}`;
+
+      const directionGlyph =
+        direction === 'entrant' ? '&larr;' : direction === 'entrant_sortant' ? '&harr;' : '&rarr;';
+      let labelText = `${escapeHtml(fromName)} ${directionGlyph} ${escapeHtml(toName)}`;
+      if (status !== 'operational') {
+        labelText += ` &middot; ${escapeHtml(LINK_STATUS_LABELS[status])}`;
+      }
 
       label = L.marker([midLat, midLng], {
         icon: L.divIcon({
@@ -120,7 +118,7 @@ export default function NetworkArrow({
             border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
-            color: ${color};
+            color: ${effectiveColor};
             border: 1px solid var(--color-border, #e2e8f0);
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
@@ -143,7 +141,6 @@ export default function NetworkArrow({
       };
 
       updateVisibility();
-
       map.on('move', updateVisibility);
       map.on('zoom', updateVisibility);
 
@@ -155,22 +152,22 @@ export default function NetworkArrow({
 
     if (onClick) {
       polyline.on('click', onClick);
-      decorator.on('click', onClick);
+      if (forwardDecorator) forwardDecorator.on('click', onClick);
       if (reverseDecorator) reverseDecorator.on('click', onClick);
 
       polyline.on('mouseover', () => polyline.setStyle({ opacity: 1, weight: weight + 2 }));
-      polyline.on('mouseout', () => polyline.setStyle({ opacity: 0.85, weight }));
+      polyline.on('mouseout', () => polyline.setStyle({ opacity: baseOpacity, weight }));
     }
 
     return () => {
       map.removeLayer(polyline);
-      map.removeLayer(decorator);
+      if (forwardDecorator) map.removeLayer(forwardDecorator);
       if (reverseDecorator) map.removeLayer(reverseDecorator);
       if (label) map.removeLayer(label);
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [positions, color, weight, onClick, fromName, toName, bidirectional, map]);
+  }, [positions, color, weight, onClick, fromName, toName, direction, status, map]);
 
   return null;
 }

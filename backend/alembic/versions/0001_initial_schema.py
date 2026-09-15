@@ -75,7 +75,10 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=True),
     )
 
-    # ─── network_links ──────────────────────────────────────────────────
+    # ─── network_links (liaisons) ───────────────────────────────────────
+    # NOTE : version d'origine, sans les champs direction/type/circuit/ip/
+    # port/status (ajoutés en 0003) ni bidirectional (ajouté en 0002 puis
+    # remplacé par direction en 0003). Historique conservé tel quel.
     op.create_table(
         "network_links",
         sa.Column("id", sa.String(36), primary_key=True),
@@ -103,7 +106,7 @@ def upgrade() -> None:
         sa.Column("text", sa.String(500), nullable=False),
     )
 
-    # ─── airport_local_parameters / values (module "Réseau local") ────
+    # ─── airport_local_parameters / values ─────────────────────────────
     op.create_table(
         "airport_local_parameters",
         sa.Column("id", sa.String(36), primary_key=True),
@@ -146,7 +149,5 @@ def downgrade() -> None:
     op.drop_table("network_items")
     op.drop_table("airports")
     op.drop_table("users")
-    # Nettoyage des types ENUM (PostgreSQL) — sans effet sur MySQL, où les
-    # enums sont des colonnes et disparaissent avec drop_table.
     for enum_name in ("roleenum", "networkcategoryenum", "itemstatusenum", "subparamstatusenum"):
         sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=True)

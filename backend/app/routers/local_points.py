@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
 from app.crud import airport as airport_crud
 from app.crud import local_point as point_crud
-from app.crud import user as user_crud
 from app.database import get_db
 from app.dependencies import get_current_user, require_write_access
 from app.models.user import User
@@ -15,19 +13,8 @@ router = APIRouter(prefix="/local-points", tags=["Local Technical Points"])
 
 
 def _to_point_out(point) -> LocalTechnicalPointOut:
-    return LocalTechnicalPointOut(
-        id=point.id,
-        parent_airport_key=point.parent_airport_key,
-        name=point.name,
-        coords=(point.lat, point.lng),
-        local_parameters=[
-            ParameterOut(id=p.id, name=p.name, values=[ParameterValueOut.model_validate(v) for v in p.values])
-            for p in point.local_parameters
-        ],
-    )
+    return LocalTechnicalPointOut(id=point.id, parent_airport_key=point.parent_airport_key, name=point.name, coords=(point.lat, point.lng), local_parameters=[ParameterOut(id=p.id, name=p.name, values=[ParameterValueOut.model_validate(v) for v in p.values]) for p in point.local_parameters])
 
-
-# ─── Points d'un aéroport (vue carte zoomée du module Réseau local) ────────
 
 @router.get("/airport/{airport_key}", response_model=list[LocalTechnicalPointOut])
 def list_points(airport_key: str, _: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -35,44 +22,24 @@ def list_points(airport_key: str, _: User = Depends(get_current_user), db: Sessi
 
 
 @router.post("/airport/{airport_key}", response_model=LocalTechnicalPointOut, status_code=status.HTTP_201_CREATED)
-def create_point(
-    airport_key: str,
-    payload: LocalTechnicalPointCreate,
-    current_user: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
-    """Correspond au clic sur la carte zoomée + saisie du nom (MapPage.tsx :
-    mode 'Ajouter un point technique')."""
+def create_point(airport_key: str, payload: LocalTechnicalPointCreate, current_user: User = Depends(require_write_access), db: Session = Depends(get_db)):
     if not airport_crud.get_airport(db, airport_key):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Aéroport introuvable")
     point = point_crud.create_point(db, airport_key, payload.name, payload.lat, payload.lng)
-    user_crud.log_activity(db, current_user, f"Ajout du point technique local {payload.name} ({airport_key})")
     return _to_point_out(point)
 
 
 @router.delete("/{point_id}", response_model=MessageResponse)
-def delete_point(
-    point_id: str,
-    current_user: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
+def delete_point(point_id: str, current_user: User = Depends(require_write_access), db: Session = Depends(get_db)):
     point = point_crud.get_point(db, point_id)
     if not point:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Point technique introuvable")
     point_crud.delete_point(db, point)
-    user_crud.log_activity(db, current_user, f"Suppression du point technique local {point.name}")
     return MessageResponse(message="Point technique supprimé")
 
 
-# ─── Informations locales du point (panneau LocalNetworkModal réutilisé) ──
-
 @router.post("/{point_id}/parameters", response_model=ParameterOut, status_code=status.HTTP_201_CREATED)
-def add_parameter(
-    point_id: str,
-    payload: ParameterCreate,
-    _: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
+def add_parameter(point_id: str, payload: ParameterCreate, _: User = Depends(require_write_access), db: Session = Depends(get_db)):
     point = point_crud.get_point(db, point_id)
     if not point:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Point technique introuvable")
@@ -81,11 +48,7 @@ def add_parameter(
 
 
 @router.delete("/parameters/{param_id}", response_model=MessageResponse)
-def delete_parameter(
-    param_id: str,
-    _: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
+def delete_parameter(param_id: str, _: User = Depends(require_write_access), db: Session = Depends(get_db)):
     param = point_crud.get_parameter(db, param_id)
     if not param:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Paramètre introuvable")
@@ -94,12 +57,7 @@ def delete_parameter(
 
 
 @router.post("/parameters/{param_id}/values", response_model=ParameterValueOut, status_code=status.HTTP_201_CREATED)
-def add_parameter_value(
-    param_id: str,
-    payload: ParameterValueCreate,
-    _: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
+def add_parameter_value(param_id: str, payload: ParameterValueCreate, _: User = Depends(require_write_access), db: Session = Depends(get_db)):
     param = point_crud.get_parameter(db, param_id)
     if not param:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Paramètre introuvable")
@@ -108,11 +66,7 @@ def add_parameter_value(
 
 
 @router.delete("/parameters/values/{value_id}", response_model=MessageResponse)
-def delete_parameter_value(
-    value_id: str,
-    _: User = Depends(require_write_access),
-    db: Session = Depends(get_db),
-):
+def delete_parameter_value(value_id: str, _: User = Depends(require_write_access), db: Session = Depends(get_db)):
     value = point_crud.get_parameter_value(db, value_id)
     if not value:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Valeur introuvable")

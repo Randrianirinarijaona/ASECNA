@@ -1,8 +1,9 @@
 """
-Script de seed : recrée les comptes de démo (admin/user/viewer, cf.
-contexts.tsx MOCK_USERS) et les 4 aéroports initiaux de data/airportsData.ts
-(TNR, DIE, MJG, Fort Dauphin) avec leurs items SFA/SMA/SRNA et
-sous-paramètres, pour retrouver l'état de démarrage du frontend.
+Script de seed : recrée les comptes de démo (admin/user/viewer) et les 4
+aéroports initiaux de data/airportsData.ts (TNR, DIE, MJG, Fort Dauphin)
+avec leurs items SFA/SMA/SRNA, marqués `in_local_network=True` (cf.
+useAirportsData.ts frontend : localNetworkAirportKeys pré-rempli avec ces
+4 aéroports).
 
 Usage :
     cd backend
@@ -11,10 +12,11 @@ Usage :
 from app.database import SessionLocal, Base, engine
 from app.models.user import User, RoleEnum
 from app.models.airport import Airport
-from app.models.network import NetworkItem, NetworkSubParameter
+from app.models.network import NetworkItem
+from app.models.link import NetworkLink, LinkDirectionEnum, LinkStatusEnum
 from app.core.security import hash_password
+from app.core.config import settings
 
-# (airport_key, category, title, description, details, status)
 ITEMS = [
     ("sfa", "AMHS/RSFTA", "Système de messagerie AFTN/AMHS",
      ["Serveur principal opérationnel", "Redondance active", "Taux de disponibilité : 99.8%"], None),
@@ -51,7 +53,7 @@ DEMO_USERS = [
 
 
 def run():
-    Base.metadata.create_all(bind=engine)  # utile en dev rapide ; en prod, préférer `alembic upgrade head`
+    Base.metadata.create_all(bind=engine)  # dev rapide ; en prod préférer `alembic upgrade head`
     db = SessionLocal()
     try:
         for username, password, role, email in DEMO_USERS:
@@ -61,9 +63,6 @@ def run():
         for key, (name, iata, lat, lng, items) in AIRPORTS.items():
             if db.get(Airport, key):
                 continue
-            # MODIFIÉ : les 4 aéroports initiaux démarrent désormais dans la
-            # liste "Réseau local" de la sidebar (cf. useAirportsData.ts
-            # frontend : localNetworkAirportKeys = Object.keys(INITIAL_AIRPORTS)).
             airport = Airport(
                 key=key, name=name, iata=iata, lat=lat, lng=lng,
                 is_technical_point=False, in_local_network=True,
@@ -71,11 +70,42 @@ def run():
             db.add(airport)
             db.flush()
             for category, title, description, details, status in items:
-                item = NetworkItem(
+                db.add(NetworkItem(
                     airport_key=key, category=category, title=title,
                     description=description, details=details, status=status,
+                ))
+
+        db.flush()
+
+        # Exemple de liaison de démonstration (illustre les nouveaux champs
+        # obligatoires ip_address/port), uniquement si TNR et DIE existent
+        # tous les deux et qu'aucune liaison AMHS/RSFTA ne les relie déjà.
+        tnr = db.get(Airport, settings.ANTANANARIVO_AIRPORT_KEY)
+        die = db.get(Airport, "DIE")
+        if tnr and die:
+            existing = (
+                db.query(NetworkLink)
+                .filter(
+                    NetworkLink.category == "sfa",
+                    NetworkLink.item_title == "AMHS/RSFTA",
+                    NetworkLink.from_airport_key == tnr.key,
+                    NetworkLink.to_airport_key == die.key,
                 )
-                db.add(item)
+                .first()
+            )
+            if not existing:
+                db.add(NetworkLink(
+                    category="sfa",
+                    item_title="AMHS/RSFTA",
+                    from_airport_key=tnr.key,
+                    to_airport_key=die.key,
+                    direction=LinkDirectionEnum.outgoing,
+                    link_type="Fibre optique",
+                    circuit="CKT-001",
+                    ip_address="10.0.0.1",
+                    port="8080",
+                    status=LinkStatusEnum.operational,
+                ))
 
         db.commit()
         print("Seed terminé avec succès.")

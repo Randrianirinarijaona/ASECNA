@@ -1,20 +1,12 @@
 import enum
 import uuid
 from datetime import datetime
-
 from sqlalchemy import String, Boolean, DateTime, Enum, func
 from sqlalchemy.orm import Mapped, mapped_column
-
 from app.database import Base
 
 
 class RoleEnum(str, enum.Enum):
-    """
-    Trois rôles utilisés par le frontend (cf. types.ts / Login.tsx) :
-    - admin       : accès total (CRUD réseau, gestion utilisateurs)
-    - technicien  : accès en écriture au réseau, pas d'admin panel
-    - user        : lecture seule stricte sur la carte
-    """
     admin = "admin"
     technicien = "technicien"
     user = "user"
@@ -26,14 +18,12 @@ def gen_uuid() -> str:
 
 class User(Base):
     __tablename__ = "users"
-
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=gen_uuid)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[RoleEnum] = mapped_column(Enum(RoleEnum), default=RoleEnum.user, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

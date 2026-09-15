@@ -16,14 +16,12 @@ export const NETWORK_CATEGORY_LABELS: Record<NetworkCategoryKey, string> = {
   srna: 'SRNA',
 };
 
-// ── Couleurs par catégorie (fallback pour SMA/SRNA) ──────────────────────
 export const NETWORK_CATEGORY_COLORS: Record<NetworkCategoryKey, string> = {
   sfa: '#2563eb',
   sma: '#16a34a',
   srna: '#7c3aed',
 };
 
-// ── Couleurs par sous-réseau SFA ──────────────────────────────────────────
 export const SFA_ITEM_COLORS: Record<string, string> = {
   amhs: '#2563eb',
   smt: '#16a34a',
@@ -40,6 +38,44 @@ export function getNetworkLinkColor(category: NetworkCategoryKey, itemTitle: str
   return NETWORK_CATEGORY_COLORS[category];
 }
 
+// NOUVEAU : clé de l'aéroport imposé comme point de départ unique de toute
+// liaison (Ivato / Antananarivo). Centralisé ici pour être réutilisé par
+// LinkManagerModal, NetworkItemModal (bouton "Créer une liaison") et
+// useAirportsData (garde-fou de création).
+export const ANTANANARIVO_AIRPORT_KEY = 'TNR';
+
+// NOUVEAU : direction d'une liaison relative à Antananarivo (le point de
+// départ). Remplace l'ancien booléen `bidirectional`.
+export type LinkDirection = 'entrant' | 'sortant' | 'entrant_sortant';
+
+export const LINK_DIRECTION_LABELS: Record<LinkDirection, string> = {
+  sortant: 'Sortant',
+  entrant: 'Entrant',
+  entrant_sortant: 'Entrant et sortant',
+};
+
+export const LINK_DIRECTION_GLYPH: Record<LinkDirection, string> = {
+  sortant: '→',
+  entrant: '←',
+  entrant_sortant: '⇄',
+};
+
+// NOUVEAU : état opérationnel d'une liaison, modifiable par un administrateur
+// (LinkDetailModal). Distinct du statut d'un item réseau (sfa/sma/srna).
+export type LinkStatus = 'operational' | 'maintenance' | 'out_of_service';
+
+export const LINK_STATUS_LABELS: Record<LinkStatus, string> = {
+  operational: 'Opérationnel',
+  maintenance: 'En maintenance',
+  out_of_service: 'Hors service',
+};
+
+export const LINK_STATUS_COLORS: Record<LinkStatus, string> = {
+  operational: '#16a34a',
+  maintenance: '#f59e0b',
+  out_of_service: '#94a3b8',
+};
+
 // ── Paramètres de liaison ─────────────────────────────────────────────────
 export type LinkParameterValue = ParameterValue;
 export type LinkParameter = Parameter;
@@ -48,13 +84,18 @@ export interface NetworkLink {
   id: string;
   category: NetworkCategoryKey;
   itemTitle: string;
-  fromAirportKey: string;
+  fromAirportKey: string; // toujours ANTANANARIVO_AIRPORT_KEY
   toAirportKey: string;
   parameters?: LinkParameter[];
-  // NOUVEAU : type de liaison choisi dans LinkManagerModal. `false`/absent
-  // = comportement historique (flèche à sens unique, from -> to).
-  // `true` = flèche affichée dans les deux sens (cf. NetworkArrow).
-  bidirectional?: boolean;
+  // MODIFIÉ : remplace `bidirectional?: boolean` par une direction à 3 états.
+  direction: LinkDirection;
+  // NOUVEAU : propriétés saisies à la création (LinkManagerModal).
+  linkType?: string;
+  circuit?: string;
+  ipAddress: string;
+  port: string;
+  // NOUVEAU : état modifiable par un administrateur (LinkDetailModal).
+  status: LinkStatus;
 }
 
 export const NETWORK_SUBITEMS: Record<NetworkCategoryKey, string[]> = {

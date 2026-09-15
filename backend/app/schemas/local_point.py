@@ -3,8 +3,6 @@ from app.schemas.base import CamelModel
 
 
 class LocalTechnicalPointCreate(CamelModel):
-    """Correspond au payload de la modale de nommage (MapPage.tsx) après
-    un clic sur la carte zoomée d'un aéroport."""
     name: str
     lat: float
     lng: float

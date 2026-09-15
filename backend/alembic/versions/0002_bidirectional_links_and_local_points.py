@@ -17,7 +17,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ─── 1. Liaisons bidirectionnelles (LinkManagerModal.tsx) ─────────────
+    # ─── 1. Liaisons bidirectionnelles (remplacé par `direction` en 0003,
+    # conservé ici pour l'historique des migrations) ───────────────────────
     op.add_column(
         "network_links",
         sa.Column("bidirectional", sa.Boolean, nullable=False, server_default=sa.false()),
@@ -61,10 +62,6 @@ def upgrade() -> None:
     )
 
     # ─── 3. Les 4 aéroports existants rejoignent le Réseau local ──────────
-    # Aligne les données existantes sur le nouveau comportement par défaut
-    # du frontend (localNetworkAirportKeys pré-rempli avec les 4 aéroports
-    # initiaux). Sans effet si ces aéroports n'existent pas encore
-    # (installation neuve : le seed s'en charge directement).
     op.execute(
         "UPDATE airports SET in_local_network = 1 "
         "WHERE `key` IN ('TNR', 'DIE', 'MJG', 'Fort Dauphin')"

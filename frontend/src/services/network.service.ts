@@ -1,12 +1,7 @@
 // services/network.service.ts
-//
-// MODIFIÉ : ajout de `bidirectional` sur linkService.create() (cf.
-// LinkManagerModal.tsx) et ajout de `localPointService`, nouveau bloc
-// couvrant les endpoints /local-points/... (points techniques locaux du
-// module Réseau local, backend routers/local_points.py).
 import { request } from './api.service';
 import type { Airport, Parameter, ParameterValue } from '../types';
-import type { NetworkCategoryKey, NetworkLink } from '../data/networkCategories';
+import type { NetworkCategoryKey, NetworkLink, LinkDirection } from '../data/networkCategories';
 
 // ─── Aéroports ────────────────────────────────────────────────────────────
 
@@ -136,7 +131,10 @@ export const networkService = {
   toggleSubParameterStatus: (subId: string): Promise<NetworkItemApiResult['subParameters'][number]> =>
     request(`/network/sub-parameters/${subId}/toggle-status`, { method: 'PATCH' }),
 
-  getUsage: (category: NetworkCategoryKey, subItem: string): Promise<{
+  getUsage: (
+    category: NetworkCategoryKey,
+    subItem: string
+  ): Promise<{
     key: string;
     matchedTitle: string;
     status?: string;
@@ -157,19 +155,35 @@ export const networkService = {
 export const linkService = {
   list: (): Promise<NetworkLink[]> => request<NetworkLink[]>('/links'),
 
-  // MODIFIÉ : ajout du paramètre `bidirectional` (LinkManagerModal.tsx),
-  // par défaut `false` pour ne rien changer aux appels existants (flux
-  // "2 clics" sur la carte, qui n'a jamais fourni ce paramètre).
+  // MODIFIÉ : remplace le paramètre `bidirectional` par un objet `details`
+  // regroupant la direction (Entrant/Sortant/Entrant et sortant) et les
+  // nouvelles propriétés de liaison (type, circuit, IP, port).
   create: (
     category: NetworkCategoryKey,
     itemTitle: string,
     fromAirportKey: string,
     toAirportKey: string,
-    bidirectional: boolean = false
+    details: {
+      direction: LinkDirection;
+      linkType?: string;
+      circuit?: string;
+      ipAddress: string;
+      port: string;
+    }
   ): Promise<NetworkLink> =>
     request<NetworkLink>('/links', {
       method: 'POST',
-      body: JSON.stringify({ category, itemTitle, fromAirportKey, toAirportKey, bidirectional }),
+      body: JSON.stringify({
+        category,
+        itemTitle,
+        fromAirportKey,
+        toAirportKey,
+        direction: details.direction,
+        linkType: details.linkType,
+        circuit: details.circuit,
+        ipAddress: details.ipAddress,
+        port: details.port,
+      }),
     }),
 
   remove: (linkId: string): Promise<{ message: string }> => request(`/links/${linkId}`, { method: 'DELETE' }),
@@ -193,8 +207,7 @@ export const linkService = {
     request(`/links/parameters/values/${valueId}`, { method: 'DELETE' }),
 };
 
-// ─── Points techniques locaux (NOUVEAU — module Réseau local) ────────────
-// Couvre backend/app/routers/local_points.py (préfixe /local-points).
+// ─── Points techniques locaux (module Réseau local) ──────────────────────
 
 export interface LocalTechnicalPointApiResult {
   id: string;

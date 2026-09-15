@@ -9,7 +9,7 @@ import {
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
-import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
+import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor, ANTANANARIVO_AIRPORT_KEY } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 import type { NetworkSubParameter } from '../../types';
@@ -124,6 +124,10 @@ export default function NetworkItemModal({
 
   const linkColor = category ? getNetworkLinkColor(category, itemTitle) : undefined;
 
+  // NOUVEAU : une nouvelle liaison ne peut être démarrée que depuis
+  // Antananarivo (cf. contrainte "point de départ obligatoire").
+  const canStartLinkFromHere = airportKey === ANTANANARIVO_AIRPORT_KEY;
+
   return (
     <div className="network-modal-overlay">
       <div className="network-modal network-item-modal">
@@ -162,7 +166,7 @@ export default function NetworkItemModal({
           </div>
         </div>
 
-        <div className="network-modal-body network-modal-body--scroll">
+        <div className="network-modal-body">
           <div className="network-item-detail">
             <div className="network-item-card-top">
               {!hideStatus && <span className={`status-dot status-dot--${editStatus}`} />}
@@ -217,7 +221,8 @@ export default function NetworkItemModal({
             <div className="network-modal-category">
               <div className="network-modal-category-header">
                 <h3>Aéroports liés</h3>
-                {isAdmin && onStartLink && (
+                {/* MODIFIÉ : bouton visible uniquement depuis Antananarivo */}
+                {isAdmin && onStartLink && canStartLinkFromHere && (
                   <button
                     className="icon-btn icon-btn--sm"
                     title="Créer une nouvelle liaison"

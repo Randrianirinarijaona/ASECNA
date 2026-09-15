@@ -5,12 +5,11 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-# Permet d'importer `app.*` quand Alembic est lancé depuis la racine backend/
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import settings  # noqa: E402
 from app.database import Base  # noqa: E402
-import app.models  # noqa: E402  (garantit que tous les modèles sont enregistrés)
+import app.models  # noqa: E402
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

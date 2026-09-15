@@ -1,16 +1,10 @@
 // hooks/useAirportsData.ts
-//
-// FUSIONNÉ : reprend la version connectée au backend (chargement initial
-// via l'API, isLoading/error) et y intègre les nouvelles fonctionnalités
-// demandées ensuite : liaisons bidirectionnelles (paramètre `bidirectional`
-// transmis à l'API) et points techniques locaux — désormais persistés via
-// /local-points/... (localPointService) au lieu d'un état en mémoire.
-//
-// Les noms de fonctions exposées restent stables pour ne pas impacter les
-// composants qui les consomment (MapPage.tsx notamment).
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Airport, Parameter } from '../types';
-import type { NetworkCategoryKey, NetworkLink } from '../data/networkCategories';
+import {
+  ANTANANARIVO_AIRPORT_KEY,
+} from '../data/networkCategories';
+import type { NetworkCategoryKey, NetworkLink, LinkDirection, LinkStatus } from '../data/networkCategories';
 import {
   airportService,
   networkService,
@@ -28,8 +22,6 @@ interface NetworkItemInput {
   details?: string[];
 }
 
-// Représente un point technique local (module Réseau local, vue carte
-// zoomée d'un aéroport). Persisté côté serveur via /local-points/...
 export interface LocalTechnicalPoint {
   id: string;
   parentAirportKey: string;
@@ -46,9 +38,6 @@ export function useAirportsData() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // NOUVEAU : points techniques locaux, chargés à la demande par
-  // aéroport (évite de tout rapatrier au démarrage) et accumulés dans un
-  // tableau à plat, filtré ensuite par `getLocalTechnicalPointsForAirport`.
   const [localTechnicalPoints, setLocalTechnicalPoints] = useState<LocalTechnicalPoint[]>([]);
   const [loadedLocalPointAirports, setLoadedLocalPointAirports] = useState<Set<string>>(new Set());
 
@@ -354,21 +343,52 @@ export function useAirportsData() {
       itemTitle: string,
       fromAirportKey: string,
       toAirportKey: string,
-      // NOUVEAU : type de liaison choisi dans LinkManagerModal. Par défaut
-      // `false` : le flux "2 clics" sur la carte (NetworkItemModal ->
-      // onStartLink -> clic sur un aéroport) ne fournit pas ce paramètre et
-      // conserve donc exactement son comportement d'origine.
-      bidirectional: boolean = false
+      details: {
+        direction: LinkDirection;
+        linkType?: string;
+        circuit?: string;
+        ipAddress: string;
+        port: string;
+      }
     ) => {
       if (fromAirportKey === toAirportKey) return;
+
+      // NOUVEAU : garde-fou (défense en profondeur) — le point de départ
+      // doit toujours être Antananarivo, même si l'UI l'impose déjà.
+      if (fromAirportKey !== ANTANANARIVO_AIRPORT_KEY) {
+        showToast("Le point de départ d'une liaison doit être Antananarivo.", 'error');
+        return;
+      }
+
+      if (!details.ipAddress.trim() || !details.port.trim()) {
+        showToast("L'adresse IP et le port sont obligatoires pour créer une liaison.", 'error');
+        return;
+      }
+
       try {
-        const created = await linkService.create(category, itemTitle, fromAirportKey, toAirportKey, bidirectional);
-        setLinks((prev) => [...prev, created]);
+        const created = await linkService.create(category, itemTitle, fromAirportKey, toAirportKey, details);
+        // NOTE BACKEND : tant que l'API ne renvoie pas encore direction /
+        // linkType / circuit / ipAddress / port / status (évolution du
+        // schéma à faire côté FastAPI — cf. remarque de fin de réponse), on
+        // fusionne localement les champs saisis pour que l'UI reste
+        // cohérente dans la session en cours.
+        setLinks((prev) => [
+          ...prev,
+          {
+            ...created,
+            direction: details.direction,
+            linkType: details.linkType,
+            circuit: details.circuit,
+            ipAddress: details.ipAddress,
+            port: details.port,
+            status: created.status ?? 'operational',
+          },
+        ]);
       } catch (err) {
         handleError(err, 'Impossible de créer cette liaison (peut-être déjà existante)');
       }
     },
-    [handleError]
+    [handleError, showToast]
   );
 
   const deleteNetworkLink = useCallback(
@@ -382,6 +402,14 @@ export function useAirportsData() {
     },
     [handleError]
   );
+
+  // NOUVEAU : changement d'état d'une liaison (Opérationnel / Maintenance /
+  // Hors service). Purement local pour l'instant — aucun endpoint backend
+  // dédié n'existe encore pour persister ce champ (cf. remarque de fin de
+  // réponse sur l'évolution du schéma API).
+  const updateLinkStatus = useCallback((linkId: string, status: LinkStatus) => {
+    setLinks((prev) => prev.map((l) => (l.id === linkId ? { ...l, status } : l)));
+  }, []);
 
   const getLinksForAirport = useCallback(
     (airportKey: string, category?: NetworkCategoryKey) =>
@@ -472,9 +500,6 @@ export function useAirportsData() {
   );
 
   // ─── Réseau local : liste d'aéroports suivis ────────────────────────────
-  // Dérivée du champ `inLocalNetwork` (persistant côté serveur). Le seed
-  // backend place désormais les 4 aéroports initiaux (Ivato/Toamasina/
-  // Mahajanga/Fort Dauphin) avec `in_local_network = true`.
 
   const localNetworkAirportKeys = useMemo(
     () => Object.entries(airports).filter(([, a]) => a.inLocalNetwork).map(([key]) => key),
@@ -603,9 +628,7 @@ export function useAirportsData() {
     [handleError]
   );
 
-  // ─── NOUVEAU : points techniques locaux (vue carte zoomée) ──────────────
-  // Persistés via /local-points/... (localPointService) au lieu d'un état
-  // purement en mémoire.
+  // ─── Points techniques locaux (vue carte zoomée) ────────────────────────
 
   const ensureLocalTechnicalPointsLoaded = useCallback(
     async (airportKey: string) => {
@@ -635,7 +658,7 @@ export function useAirportsData() {
         setLocalTechnicalPoints((prev) => [...prev, created]);
         return created.id;
       } catch (err) {
-        handleError(err, "Impossible de créer le point technique");
+        handleError(err, 'Impossible de créer le point technique');
         return null;
       }
     },
@@ -753,6 +776,7 @@ export function useAirportsData() {
     updateNetworkItemDescription,
     addNetworkLink,
     deleteNetworkLink,
+    updateLinkStatus,
     getLinksForAirport,
     addLinkParameter,
     deleteLinkParameter,
@@ -768,7 +792,6 @@ export function useAirportsData() {
     deleteAirportLocalParameter,
     addAirportLocalParameterValue,
     deleteAirportLocalParameterValue,
-    // Points techniques locaux (NOUVEAU)
     localTechnicalPoints,
     ensureLocalTechnicalPointsLoaded,
     addLocalTechnicalPoint,

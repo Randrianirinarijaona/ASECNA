@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
-import type { LeafletMouseEvent } from 'leaflet';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
+// @ts-ignore: Missing type definitions for leaflet
+import L from 'leaflet';
 import { Plus } from 'lucide-react';
 
 import MapHeader from '../../components/map/MapHeader';
@@ -21,8 +22,13 @@ import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
 
 import { useAirportsData } from '../../hooks/useAirportsData';
-import { getNetworkLinkColor, getAirportsByNetwork } from '../../data/networkCategories';
-import type { NetworkCategoryKey } from '../../data/networkCategories';
+import {
+  getNetworkLinkColor,
+  getAirportsByNetwork,
+  NETWORK_CATEGORY_LABELS,
+  LINK_DIRECTION_LABELS,
+} from '../../data/networkCategories';
+import type { NetworkCategoryKey, LinkDirection } from '../../data/networkCategories';
 
 import { useAuth, useToast, useTheme } from '../../hooks';
 // @ts-ignore: CSS side-effect import handled by build toolings
@@ -40,8 +46,6 @@ const LOCAL_ZOOM = 13;
 const LOCAL_MIN_ZOOM = 11;
 const LOCAL_BOUNDS_DELTA = 0.15;
 
-// Pilote la vue Leaflet (zoom + bounds) selon l'aéroport actuellement
-// affiché en vue "carte zoomée" dans le module Réseau local.
 function LocalAirportZoomController({ targetCoords }: { targetCoords: [number, number] | null }) {
   const map = useMap();
 
@@ -64,8 +68,6 @@ function LocalAirportZoomController({ targetCoords }: { targetCoords: [number, n
   return null;
 }
 
-// Capte les clics sur la carte pour placer un point technique local,
-// uniquement quand `active` est vrai.
 function LocalPointClickCatcher({
   active,
   onPick,
@@ -74,12 +76,92 @@ function LocalPointClickCatcher({
   onPick: (coords: [number, number]) => void;
 }) {
   useMapEvents({
-    click(e: LeafletMouseEvent) {
+    click(e) {
       if (!active) return;
       onPick([e.latlng.lat, e.latlng.lng]);
     },
   });
   return null;
+}
+
+function escapeHtmlForIndicator(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+interface OffscreenTarget {
+  id: string;
+  coords: [number, number];
+  name: string;
+  color: string;
+}
+
+// NOUVEAU : conserve le zoom par défaut de la carte (pas de zoom
+// automatique pour englober tous les aéroports d'une liaison) et affiche,
+// en bordure de fenêtre, une flèche + le nom de tout aéroport concerné par
+// une liaison active mais actuellement hors champ de vision. Recalculé à
+// chaque déplacement/zoom de la carte.
+function OffscreenAirportIndicators({ targets }: { targets: OffscreenTarget[] }) {
+  const map = useMap();
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const rerender = () => setTick((n) => n + 1);
+    map.on('move', rerender);
+    map.on('zoom', rerender);
+    map.on('resize', rerender);
+    rerender();
+    return () => {
+      map.off('move', rerender);
+      map.off('zoom', rerender);
+      map.off('resize', rerender);
+    };
+  }, [map]);
+
+  if (targets.length === 0) return null;
+
+  const size = map.getSize();
+  const padding = 30;
+  const center = { x: size.x / 2, y: size.y / 2 };
+  const halfW = Math.max(size.x / 2 - padding, 10);
+  const halfH = Math.max(size.y / 2 - padding, 10);
+
+  return (
+    <>
+      {targets.map((target) => {
+        const point = map.latLngToContainerPoint(target.coords as any);
+        const isVisible = point.x >= 0 && point.x <= size.x && point.y >= 0 && point.y <= size.y;
+        if (isVisible) return null;
+
+        const dx = point.x - center.x;
+        const dy = point.y - center.y;
+        const scale = Math.min(
+          dx !== 0 ? Math.abs(halfW / dx) : Infinity,
+          dy !== 0 ? Math.abs(halfH / dy) : Infinity
+        );
+        const edgePoint = L.point(center.x + dx * scale, center.y + dy * scale);
+        const edgeLatLng = map.containerPointToLatLng(edgePoint);
+        const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+        const icon = L.divIcon({
+          className: 'offscreen-indicator-icon',
+          html: `
+            <div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-50%);pointer-events:none;">
+              <div style="font-size:20px;line-height:1;color:${target.color};transform:rotate(${angleDeg}deg);text-shadow:0 1px 3px rgba(0,0,0,0.4);">➜</div>
+              <div style="margin-top:2px;background:var(--color-card,#ffffff);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;color:${target.color};border:1px solid var(--color-border,#e2e8f0);white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);">${escapeHtmlForIndicator(target.name)}</div>
+            </div>
+          `,
+          iconSize: [0, 0],
+        });
+
+        return <Marker key={target.id} position={edgeLatLng} icon={icon} interactive={false} />;
+      })}
+    </>
+  );
 }
 
 export default function MapPage() {
@@ -88,8 +170,6 @@ export default function MapPage() {
   const { resolvedTheme } = useTheme();
 
   const isAdmin = user?.role === 'admin';
-  // Rôle 'user' = lecture seule stricte : pas d'écriture sur le réseau, et
-  // (MODIFIÉ) plus aucun accès au module "Réseau local" lui-même.
   const canAccessNetworkSettings = user?.role !== 'user';
 
   const {
@@ -106,6 +186,7 @@ export default function MapPage() {
     updateNetworkItemDescription,
     addNetworkLink,
     deleteNetworkLink,
+    updateLinkStatus,
     addLinkParameter,
     deleteLinkParameter,
     addLinkParameterValue,
@@ -154,12 +235,35 @@ export default function MapPage() {
     mode: 'add' | 'remove';
   } | null>(null);
 
-  // Vue carte zoomée d'un aéroport du module Réseau local.
   const [zoomedLocalAirportKey, setZoomedLocalAirportKey] = useState<string | null>(null);
   const [selectedLocalPointId, setSelectedLocalPointId] = useState<string | null>(null);
   const [addingLocalPointMode, setAddingLocalPointMode] = useState(false);
   const [pendingPointCoords, setPendingPointCoords] = useState<[number, number] | null>(null);
   const [newPointName, setNewPointName] = useState('');
+
+  // NOUVEAU : finalisation d'une liaison créée via le flux "2 clics" sur la
+  // carte — collecte direction/type/circuit/IP/port (obligatoires pour
+  // l'IP et le port) avant validation.
+  const [pendingLinkDetails, setPendingLinkDetails] = useState<{
+    category: NetworkCategoryKey;
+    itemTitle: string;
+    fromAirportKey: string;
+    toAirportKey: string;
+  } | null>(null);
+  const [pendingLinkDirection, setPendingLinkDirection] = useState<LinkDirection>('sortant');
+  const [pendingLinkType, setPendingLinkType] = useState('');
+  const [pendingLinkCircuit, setPendingLinkCircuit] = useState('');
+  const [pendingLinkIp, setPendingLinkIp] = useState('');
+  const [pendingLinkPort, setPendingLinkPort] = useState('');
+
+  const closePendingLinkDetails = useCallback(() => {
+    setPendingLinkDetails(null);
+    setPendingLinkDirection('sortant');
+    setPendingLinkType('');
+    setPendingLinkCircuit('');
+    setPendingLinkIp('');
+    setPendingLinkPort('');
+  }, []);
 
   const technicalPoints = useMemo(
     () => Object.fromEntries(Object.entries(airports).filter(([, a]) => a.isTechnicalPoint)),
@@ -200,8 +304,15 @@ export default function MapPage() {
 
   const handleAirportMarkerClick = (key: string) => {
     if (linkingState) {
+      // MODIFIÉ : au lieu de créer la liaison immédiatement, on ouvre la
+      // fenêtre de finalisation (direction + type/circuit + IP/port).
       if (key !== linkingState.fromAirportKey) {
-        addNetworkLink(linkingState.category, linkingState.itemTitle, linkingState.fromAirportKey, key);
+        setPendingLinkDetails({
+          category: linkingState.category,
+          itemTitle: linkingState.itemTitle,
+          fromAirportKey: linkingState.fromAirportKey,
+          toAirportKey: key,
+        });
       }
       setLinkingState(null);
       return;
@@ -257,7 +368,9 @@ export default function MapPage() {
           itemTitle: l.itemTitle,
           fromName: from.name,
           toName: to.name,
-          bidirectional: l.bidirectional,
+          // MODIFIÉ : direction/statut remplacent l'ancien `bidirectional`.
+          direction: l.direction,
+          status: l.status,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
@@ -284,9 +397,6 @@ export default function MapPage() {
     return { link, from, to };
   }, [selectedLinkId, links, airports]);
 
-  // NOUVEAU : garde-fou défensif. Si le rôle change (ou si l'état a été
-  // manipulé) alors que la vue "Réseau local" est encore active pour un
-  // rôle désormais restreint, on la referme automatiquement.
   useEffect(() => {
     if (!canAccessNetworkSettings && activeModule === 'reseauLocal') {
       setActiveModule(null);
@@ -336,7 +446,6 @@ export default function MapPage() {
           activeNetworkUsage={networkUsage}
           isAdmin={isAdmin}
           onAddAirportClick={() => setShowAddAirport(true)}
-          // NOUVEAU : masque entièrement l'entrée "Réseau local" pour le rôle 'user'.
           canAccessLocalNetwork={canAccessNetworkSettings}
           airports={airports}
           localNetworkAirportKeys={localNetworkAirportKeys}
@@ -494,10 +603,32 @@ export default function MapPage() {
                   weight={4}
                   fromName={conn.fromName}
                   toName={conn.toName}
-                  bidirectional={conn.bidirectional}
+                  direction={conn.direction}
+                  status={conn.status}
                   onClick={() => openLinkDetail(conn.id)}
                 />
               ))}
+
+            {/* NOUVEAU : indicateurs d'aéroports hors champ de vision pour
+                les liaisons actuellement affichées. */}
+            {networkUsage && (
+              <OffscreenAirportIndicators
+                targets={networkConnections.flatMap((conn) => [
+                  {
+                    id: `${conn.id}-from`,
+                    coords: conn.positions[0],
+                    name: conn.fromName,
+                    color: getNetworkLinkColor(conn.category, conn.itemTitle),
+                  },
+                  {
+                    id: `${conn.id}-to`,
+                    coords: conn.positions[1],
+                    name: conn.toName,
+                    color: getNetworkLinkColor(conn.category, conn.itemTitle),
+                  },
+                ])}
+              />
+            )}
           </MapContainer>
 
           {selectedAirportKey && airports[selectedAirportKey] && (
@@ -574,6 +705,7 @@ export default function MapPage() {
           onDeleteParameter={deleteLinkParameter}
           onAddValue={addLinkParameterValue}
           onDeleteValue={deleteLinkParameterValue}
+          onUpdateStatus={updateLinkStatus}
         />
       )}
 
@@ -646,6 +778,104 @@ export default function MapPage() {
           />
         </div>
       </Modal>
+
+      {/* NOUVEAU : finalisation de la liaison créée via le flux "2 clics". */}
+      {pendingLinkDetails && (
+        <Modal
+          isOpen
+          onClose={closePendingLinkDetails}
+          title="Finaliser la liaison"
+          size="sm"
+          footer={
+            <div className="modal-footer-actions">
+              <button className="btn btn-secondary" onClick={closePendingLinkDetails}>
+                Annuler
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={!pendingLinkIp.trim() || !pendingLinkPort.trim()}
+                onClick={() => {
+                  addNetworkLink(
+                    pendingLinkDetails.category,
+                    pendingLinkDetails.itemTitle,
+                    pendingLinkDetails.fromAirportKey,
+                    pendingLinkDetails.toAirportKey,
+                    {
+                      direction: pendingLinkDirection,
+                      linkType: pendingLinkType.trim() || undefined,
+                      circuit: pendingLinkCircuit.trim() || undefined,
+                      ipAddress: pendingLinkIp.trim(),
+                      port: pendingLinkPort.trim(),
+                    }
+                  );
+                  closePendingLinkDetails();
+                }}
+              >
+                Créer la liaison
+              </button>
+            </div>
+          }
+        >
+          <p className="network-modal-subtitle" style={{ marginBottom: 12 }}>
+            {NETWORK_CATEGORY_LABELS[pendingLinkDetails.category]} • {pendingLinkDetails.itemTitle}
+            <br />
+            {airports[pendingLinkDetails.fromAirportKey]?.name} → {airports[pendingLinkDetails.toAirportKey]?.name}
+          </p>
+
+          <div className="form-group text-left">
+            <label className="form-label">Direction</label>
+            <select
+              className="form-input"
+              value={pendingLinkDirection}
+              onChange={(e) => setPendingLinkDirection(e.target.value as LinkDirection)}
+            >
+              <option value="sortant">{LINK_DIRECTION_LABELS.sortant}</option>
+              <option value="entrant">{LINK_DIRECTION_LABELS.entrant}</option>
+              <option value="entrant_sortant">{LINK_DIRECTION_LABELS.entrant_sortant}</option>
+            </select>
+          </div>
+
+          <div className="form-group text-left">
+            <label className="form-label">Type (optionnel)</label>
+            <input
+              className="form-input"
+              value={pendingLinkType}
+              onChange={(e) => setPendingLinkType(e.target.value)}
+              placeholder="ex: Fibre optique"
+            />
+          </div>
+
+          <div className="form-group text-left">
+            <label className="form-label">Circuit (optionnel)</label>
+            <input
+              className="form-input"
+              value={pendingLinkCircuit}
+              onChange={(e) => setPendingLinkCircuit(e.target.value)}
+              placeholder="ex: CKT-042"
+            />
+          </div>
+
+          <div className="form-group text-left">
+            <label className="form-label">@IP</label>
+            <input
+              className="form-input"
+              value={pendingLinkIp}
+              onChange={(e) => setPendingLinkIp(e.target.value)}
+              placeholder="ex: 10.2.0.5"
+            />
+          </div>
+
+          <div className="form-group text-left">
+            <label className="form-label">Port</label>
+            <input
+              className="form-input"
+              value={pendingLinkPort}
+              onChange={(e) => setPendingLinkPort(e.target.value)}
+              placeholder="ex: 8080"
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

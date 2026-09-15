@@ -1,16 +1,17 @@
 -- ============================================================================
 -- ASECNA Network — Migration SQL 002
--- Ajoute : liaisons bidirectionnelles + points techniques locaux
--- (module "Réseau local").
+-- Ajoute : liaisons bidirectionnelles (colonne `bidirectional`, remplacée
+-- ensuite par `direction` en migration 003 — exécutez les deux scripts
+-- dans l'ordre si vous partez de zéro) + points techniques locaux (module
+-- "Réseau local").
 --
 -- À exécuter dans phpMyAdmin (onglet SQL) sur la base `asecna_network`
--- existante. Équivalent de `alembic upgrade head` (revision 0002) pour ceux
--- qui gèrent leur base sans Alembic.
+-- existante, avant migration_003_link_direction_fields_status.sql.
 -- ============================================================================
 
 USE asecna_network;
 
--- ─── 1. Liaisons bidirectionnelles (LinkManagerModal.tsx) ────────────────
+-- ─── 1. Liaisons bidirectionnelles (remplacé par `direction` en 003) ─────
 ALTER TABLE network_links
   ADD COLUMN bidirectional TINYINT(1) NOT NULL DEFAULT 0;
 
@@ -44,8 +45,6 @@ CREATE TABLE IF NOT EXISTS local_technical_point_parameter_values (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── 3. Les 4 aéroports existants rejoignent le Réseau local ─────────────
--- Aligne les données déjà en base sur le nouveau comportement par défaut
--- du frontend (localNetworkAirportKeys pré-rempli avec ces 4 aéroports).
 UPDATE airports
   SET in_local_network = 1
   WHERE `key` IN ('TNR', 'DIE', 'MJG', 'Fort Dauphin');

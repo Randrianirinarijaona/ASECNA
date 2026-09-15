@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.core.config import settings
 from app.routers import auth, users, admin, airports, network_items, network_links, local_points
 
@@ -9,14 +8,7 @@ app = FastAPI(
     description="API backend pour l'application de gestion du réseau ASECNA (aéroports, SFA/SMA/SRNA, liaisons).",
     version="1.0.0",
 )
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 app.include_router(auth.router)
 app.include_router(users.router)

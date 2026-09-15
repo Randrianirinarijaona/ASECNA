@@ -2,8 +2,14 @@
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import type { Airport } from '../../types';
-import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
-import type { NetworkLink } from '../../data/networkCategories';
+import {
+  NETWORK_CATEGORY_LABELS,
+  getNetworkLinkColor,
+  LINK_DIRECTION_LABELS,
+  LINK_STATUS_LABELS,
+  LINK_STATUS_COLORS,
+} from '../../data/networkCategories';
+import type { NetworkLink, LinkStatus } from '../../data/networkCategories';
 // @ts-ignore
 import './NetworkItemModal.css';
 
@@ -17,6 +23,8 @@ interface LinkDetailModalProps {
   onDeleteParameter: (linkId: string, paramId: string) => void;
   onAddValue: (linkId: string, paramId: string, name: string, text: string) => void;
   onDeleteValue: (linkId: string, paramId: string, valueId: string) => void;
+  // NOUVEAU : changement d'état de la liaison, réservé à l'admin.
+  onUpdateStatus?: (linkId: string, status: LinkStatus) => void;
 }
 
 export default function LinkDetailModal({
@@ -29,6 +37,7 @@ export default function LinkDetailModal({
   onDeleteParameter,
   onAddValue,
   onDeleteValue,
+  onUpdateStatus,
 }: LinkDetailModalProps) {
   const [newParamName, setNewParamName] = useState('');
   const [showAddParam, setShowAddParam] = useState(false);
@@ -85,6 +94,71 @@ export default function LinkDetailModal({
         </div>
 
         <div className="network-modal-body">
+          {/* NOUVEAU : bloc d'informations fixes de la liaison (direction,
+              type, circuit, IP, port, statut). */}
+          <div className="network-modal-category">
+            <h3>Informations de la liaison</h3>
+            <div className="network-item-grid-params">
+              <div className="network-item-card sub-parameter-card">
+                <span className="network-item-desc" style={{ margin: 0 }}>
+                  <strong>Direction</strong> : {LINK_DIRECTION_LABELS[link.direction]}
+                </span>
+              </div>
+              {link.linkType && (
+                <div className="network-item-card sub-parameter-card">
+                  <span className="network-item-desc" style={{ margin: 0 }}>
+                    <strong>Type</strong> : {link.linkType}
+                  </span>
+                </div>
+              )}
+              {link.circuit && (
+                <div className="network-item-card sub-parameter-card">
+                  <span className="network-item-desc" style={{ margin: 0 }}>
+                    <strong>Circuit</strong> : {link.circuit}
+                  </span>
+                </div>
+              )}
+              <div className="network-item-card sub-parameter-card">
+                <span className="network-item-desc" style={{ margin: 0 }}>
+                  <strong>@IP</strong> : {link.ipAddress}
+                </span>
+              </div>
+              <div className="network-item-card sub-parameter-card">
+                <span className="network-item-desc" style={{ margin: 0 }}>
+                  <strong>Port</strong> : {link.port}
+                </span>
+              </div>
+            </div>
+
+            <div className="network-detail-footer" style={{ marginTop: 10 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: LINK_STATUS_COLORS[link.status] }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    display: 'inline-block',
+                    background: LINK_STATUS_COLORS[link.status],
+                  }}
+                />
+                {LINK_STATUS_LABELS[link.status]}
+              </span>
+
+              {isAdmin && onUpdateStatus && (
+                <select
+                  className="form-input"
+                  style={{ maxWidth: 200 }}
+                  value={link.status}
+                  onChange={(e) => onUpdateStatus(link.id, e.target.value as LinkStatus)}
+                >
+                  <option value="operational">Opérationnel</option>
+                  <option value="maintenance">En maintenance</option>
+                  <option value="out_of_service">Hors service</option>
+                </select>
+              )}
+            </div>
+          </div>
+
           <div className="network-modal-category">
             <div className="network-modal-category-header">
               <h3>Paramètres de la liaison</h3>

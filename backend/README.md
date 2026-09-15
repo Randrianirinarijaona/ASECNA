@@ -9,31 +9,31 @@
 ```bash
 cd backend
 python -m venv venv
-# Windows :
-venv\Scripts\activate
-# macOS/Linux :
-source venv/bin/activate ou venv\Scripts\Activate
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # macOS/Linux
 
 pip install -r requirements.txt
-cp .env.example .env   # puis ajustez DB_PASSWORD / SECRET_KEY si besoin
+cp .env.example .env
 ```
 
 ## 3. Créer la base de données
 
-Deux options équivalentes :
-
-**Option A — Alembic (recommandé, gère les migrations futures) :**
+**Option A — Alembic (recommandé) :**
 ```bash
-# Crée d'abord une base vide dans phpMyAdmin : "asecna_network"
+# Créez d'abord une base vide "asecna_network" dans phpMyAdmin
 alembic upgrade head
-python -m app.seed        # comptes de démo + 4 aéroports initiaux
+python -m app.seed
 ```
 
-**Option B — Script SQL brut (phpMyAdmin) :**
-Importez `sql/schema.sql` directement dans phpMyAdmin (onglet "Importer").
-Remplacez ensuite les hash de mot de passe par ceux générés par
-`python -m app.seed`, ou lancez le seed après import (il ignore les lignes
-déjà présentes grâce aux `INSERT IGNORE` / vérifications d'existence).
+**Option B — Script SQL brut (phpMyAdmin), pour une base neuve :**
+Importez `sql/schema.sql` directement dans phpMyAdmin.
+
+**Mise à jour d'une base existante (déjà sur la version précédente) :**
+Exécutez dans l'ordre les scripts encore manquants dans `sql/` :
+`migration_002_bidirectional_and_local_points.sql` puis
+`migration_003_link_direction_fields_status.sql` — ou simplement
+`alembic upgrade head`, qui détecte automatiquement la révision déjà
+appliquée.
 
 ## 4. Lancer le serveur
 
@@ -41,10 +41,9 @@ déjà présentes grâce aux `INSERT IGNORE` / vérifications d'existence).
 uvicorn app.main:app --reload --port 8000
 ```
 
-L'API est disponible sur `http://localhost:8000`, documentation interactive
-Swagger sur `http://localhost:8000/docs`.
+API : `http://localhost:8000` — Documentation Swagger : `http://localhost:8000/docs`
 
-## 5. Comptes de démonstration (créés par le seed)
+## 5. Comptes de démonstration
 
 | Utilisateur | Mot de passe | Rôle        |
 |-------------|--------------|-------------|
@@ -54,13 +53,22 @@ Swagger sur `http://localhost:8000/docs`.
 
 ## 6. Connecter le frontend
 
-Dans le frontend, créez un fichier `.env` avec :
 ```
 VITE_API_URL=http://localhost:8000
 ```
-(déjà lu par `services/api.service.ts` via `import.meta.env.VITE_API_URL`).
 
-## 7. Générer une nouvelle migration après modification des modèles
+## 7. Règles métier à connaître
+
+- Toute liaison (`NetworkLink`) doit obligatoirement partir de l'aéroport
+  d'Antananarivo (`ANTANANARIVO_AIRPORT_KEY`, `TNR` par défaut, configurable
+  via `.env`) — vérifié dans `crud/link.py::create_link`, retourne `400` sinon.
+- `direction` remplace l'ancien `bidirectional` : `incoming` / `outgoing` / `both`.
+- `ip_address` et `port` sont obligatoires à la création d'une liaison
+  (`link_type` et `circuit` restent optionnels).
+- Le statut d'une liaison (`operational` / `maintenance` / `out_of_service`)
+  se modifie via `PATCH /links/{id}/status`, réservé aux administrateurs.
+
+## 8. Générer une nouvelle migration après modification des modèles
 
 ```bash
 alembic revision --autogenerate -m "description du changement"

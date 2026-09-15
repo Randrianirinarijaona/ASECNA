@@ -1,7 +1,9 @@
 -- ============================================================================
 -- ASECNA Network — Script de création de la base MySQL (WampServer)
--- Alternative à `alembic upgrade head` : à exécuter directement dans
--- phpMyAdmin ou la console MySQL si vous préférez ne pas utiliser Alembic.
+-- État final : inclut déjà les migrations 0001 (schéma initial), 0002
+-- (points techniques locaux, colonne in_local_network) et 0003 (direction/
+-- type/circuit/@IP/port/statut sur les liaisons). Pour une base neuve
+-- uniquement — pour une base existante, voir sql/migration_00X_*.sql.
 -- ============================================================================
 
 CREATE DATABASE IF NOT EXISTS asecna_network
@@ -61,15 +63,22 @@ CREATE TABLE IF NOT EXISTS network_sub_parameters (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ─── network_links (liaisons / flèches entre aéroports) ──────────────────
+-- Règle métier : from_airport_key doit TOUJOURS être Antananarivo ('TNR'),
+-- imposé côté application (crud/link.py::create_link), pas par une
+-- contrainte SQL (MySQL ne permet pas de CHECK dynamique inter-lignes ici).
 CREATE TABLE IF NOT EXISTS network_links (
   id                VARCHAR(36)  PRIMARY KEY,
   category          ENUM('sfa','sma','srna') NOT NULL,
   item_title        VARCHAR(150) NOT NULL,
   from_airport_key  VARCHAR(64)  NOT NULL,
   to_airport_key    VARCHAR(64)  NOT NULL,
-  -- Liaison affichée dans les deux sens (LinkManagerModal.tsx) ou à sens
-  -- unique (comportement historique, valeur par défaut).
-  bidirectional     TINYINT(1)   NOT NULL DEFAULT 0,
+  -- Sens du flux par rapport à Antananarivo (LinkManagerModal.tsx).
+  direction         ENUM('incoming','outgoing','both') NOT NULL DEFAULT 'outgoing',
+  link_type         VARCHAR(100) NULL,
+  circuit           VARCHAR(100) NULL,
+  ip_address        VARCHAR(45)  NULL,
+  port              VARCHAR(10)  NULL,
+  status            ENUM('operational','maintenance','out_of_service') NOT NULL DEFAULT 'operational',
   CONSTRAINT fk_links_from_airport
     FOREIGN KEY (from_airport_key) REFERENCES airports(`key`) ON DELETE CASCADE,
   CONSTRAINT fk_links_to_airport
@@ -158,6 +167,9 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 -- ============================================================================
 -- Données de démo (comptes + 4 aéroports initiaux, cf. data/airportsData.ts)
 -- Mots de passe hachés bcrypt pour "123456" (à regénérer en prod !)
+-- Préférez `python -m app.seed` (backend/app/seed.py) qui génère un hash
+-- bcrypt correct au moment de l'insertion, plutôt que copier ce script tel
+-- quel en production.
 -- ============================================================================
 
 INSERT IGNORE INTO users (id, username, email, hashed_password, role) VALUES
@@ -165,10 +177,9 @@ INSERT IGNORE INTO users (id, username, email, hashed_password, role) VALUES
   (UUID(), 'user',   'user@asecna.mg',   '$2b$12$KIXQ6E0J8b6f0mQFvXO0KOG9m3hM9y0v3ZC1o6gk8w0m0v6z0n0lu', 'technicien'),
   (UUID(), 'viewer', 'viewer@asecna.mg', '$2b$12$KIXQ6E0J8b6f0mQFvXO0KOG9m3hM9y0v3ZC1o6gk8w0m0v6z0n0lu', 'user');
 
--- NOTE : le hash ci-dessus est indicatif. Préférez lancer `python -m app.seed`
--- (backend/app/seed.py) qui génère un hash bcrypt correct au moment de
--- l'insertion, plutôt que de copier ce script tel quel en production.
-
+-- Les 4 aéroports initiaux démarrent dans la liste "Réseau local" de la
+-- sidebar (cf. useAirportsData.ts frontend). TNR (Ivato) est également
+-- l'aéroport d'Antananarivo, point de départ obligatoire de toute liaison.
 INSERT IGNORE INTO airports (`key`, name, iata, lat, lng, is_technical_point, in_local_network) VALUES
   ('TNR', 'Ivato', 'TNR', -18.8787, 47.5079, 0, 1),
   ('DIE', 'Toamasina', 'DIE', -18.1089697984752, 49.39269376622393, 0, 1),

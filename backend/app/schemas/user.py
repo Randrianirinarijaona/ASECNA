@@ -1,12 +1,10 @@
 from datetime import datetime
 from typing import Optional
-
 from app.models.user import RoleEnum
 from app.schemas.base import CamelModel
 
 
 class UserOut(CamelModel):
-    """Correspond exactement à `User` dans types.ts."""
     id: str
     username: str
     email: Optional[str] = None
@@ -18,7 +16,6 @@ class UserOut(CamelModel):
 
 
 class UserUpdate(CamelModel):
-    """Champs modifiables via userService.update() (Profile.tsx / Settings.tsx)."""
     username: Optional[str] = None
     email: Optional[str] = None
     is_active: Optional[bool] = None
@@ -40,7 +37,6 @@ class RegisterPayload(CamelModel):
 
 
 class AuthResponse(CamelModel):
-    """Correspond exactement à `AuthResponse` dans types.ts."""
     access_token: str
     token_type: str = "bearer"
     user: UserOut
