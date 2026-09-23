@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Trash2, Plus } from 'lucide-react';
+import { X, Trash2, Plus, Edit2, Check } from 'lucide-react';
 import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
@@ -22,6 +22,8 @@ interface NetworkModalProps {
   links: NetworkLink[];
   onClose: () => void;
   onDeleteAirport: (key: string) => void;
+  // NOUVEAU : modification du nom / code IATA de l'aéroport, admin uniquement.
+  onUpdateAirport?: (key: string, updates: { name?: string; iata?: string }) => void;
   onAddItem: (category: NetworkCategoryKey, item: NetworkItemInput) => void;
   onDeleteItem: (category: NetworkCategoryKey, title: string) => void;
   onUpdateItemStatus: (
@@ -70,6 +72,7 @@ export default function NetworkModal({
   links,
   onClose,
   onDeleteAirport,
+  onUpdateAirport,
   onAddItem,
   onDeleteItem,
   onUpdateItemStatus,
@@ -83,6 +86,11 @@ export default function NetworkModal({
 }: NetworkModalProps) {
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
+
+  // NOUVEAU : édition du nom / code IATA de l'aéroport (admin uniquement).
+  const [editingAirport, setEditingAirport] = useState(false);
+  const [editName, setEditName] = useState(airport.name);
+  const [editIata, setEditIata] = useState(airport.iata);
 
   const [selectedItemKey, setSelectedItemKey] = useState<{
     category: NetworkCategoryKey;
@@ -107,17 +115,74 @@ export default function NetworkModal({
     setAddingTo(null);
   };
 
+  // NOUVEAU : ouvre/ferme le mode édition, en réinitialisant les champs
+  // sur les valeurs actuelles à chaque ouverture.
+  const startEditingAirport = () => {
+    setEditName(airport.name);
+    setEditIata(airport.iata);
+    setEditingAirport(true);
+  };
+
+  const saveAirportEdit = () => {
+    if (!editName.trim() || !onUpdateAirport) return;
+    onUpdateAirport(airportKey, {
+      name: editName.trim(),
+      iata: editIata.trim().toUpperCase(),
+    });
+    setEditingAirport(false);
+  };
+
   return (
     <div className="network-modal-overlay">
       <div className="network-modal">
         <div className="network-modal-header">
-          <div>
-            <h2>
-              {airport.name} <span className="iata">({airport.iata})</span>
-            </h2>
-            <p className="network-modal-subtitle">Paramètres du réseau actif</p>
+          <div style={{ flex: 1 }}>
+            {editingAirport ? (
+              // NOUVEAU : formulaire d'édition inline (nom + code IATA).
+              <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                <input
+                  className="form-input"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Nom de l'aéroport"
+                  autoFocus
+                />
+                <input
+                  className="form-input"
+                  value={editIata}
+                  onChange={(e) => setEditIata(e.target.value)}
+                  placeholder="Code IATA (optionnel)"
+                  maxLength={3}
+                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-primary btn-sm" disabled={!editName.trim()} onClick={saveAirportEdit}>
+                    <Check size={14} /> Enregistrer
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditingAirport(false)}>
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2>
+                  {airport.name} <span className="iata">({airport.iata || '—'})</span>
+                </h2>
+                <p className="network-modal-subtitle">Paramètres du réseau actif</p>
+              </>
+            )}
           </div>
           <div className="network-modal-header-actions">
+            {/* NOUVEAU : bouton "Modifier" (nom / IATA), admin uniquement */}
+            {isAdmin && onUpdateAirport && !editingAirport && (
+              <button
+                className="icon-btn"
+                title="Modifier l'aéroport"
+                onClick={startEditingAirport}
+              >
+                <Edit2 size={16} />
+              </button>
+            )}
             {isAdmin && (
               <button
                 className="icon-btn icon-btn--danger"

@@ -13,11 +13,7 @@ interface NetworkArrowProps {
   onClick?: () => void;
   fromName?: string;
   toName?: string;
-  // MODIFIÉ : remplace l'ancien booléen `bidirectional` par une direction à
-  // 3 valeurs. Par défaut 'sortant' = comportement historique (flèche
-  // from -> to uniquement).
   direction?: LinkDirection;
-  // NOUVEAU : état de la liaison, affecte le style du trait.
   status?: LinkStatus;
 }
 
@@ -37,7 +33,8 @@ export default function NetworkArrow({
   onClick,
   fromName,
   toName,
-  direction = 'sortant',
+  // CORRIGÉ : valeur par défaut alignée sur le backend.
+  direction = 'outgoing',
   status = 'operational',
 }: NetworkArrowProps) {
   const map = useMap();
@@ -49,15 +46,13 @@ export default function NetworkArrow({
     const start = L.latLng(positions[0]);
     const end = L.latLng(positions[positions.length - 1]);
 
-    // NOUVEAU : le statut influence le style du trait (hors service = gris,
-    // maintenance = pointillé, opérationnel = rendu historique).
     const effectiveColor = status === 'out_of_service' ? '#94a3b8' : color;
     const dashArray = status === 'operational' ? undefined : '8 6';
     const baseOpacity = status === 'operational' ? 0.85 : 0.6;
 
     const polyline = L.polyline(positions, {
       color: effectiveColor,
-      weight,
+      weight: 2,
       opacity: baseOpacity,
       lineCap: 'round',
       lineJoin: 'round',
@@ -75,11 +70,9 @@ export default function NetworkArrow({
       }),
     });
 
-    // 'sortant' -> flèche dans le sens du tracé (Antananarivo -> aéroport).
-    // 'entrant' -> flèche dans le sens inverse (aéroport -> Antananarivo).
-    // 'entrant_sortant' -> les deux.
-    const showForwardArrow = direction === 'sortant' || direction === 'entrant_sortant';
-    const showReverseArrow = direction === 'entrant' || direction === 'entrant_sortant';
+    // CORRIGÉ : comparaisons alignées sur les valeurs anglaises de l'enum.
+    const showForwardArrow = direction === 'outgoing' || direction === 'both';
+    const showReverseArrow = direction === 'incoming' || direction === 'both';
 
     let forwardDecorator: any = null;
     let reverseDecorator: any = null;
@@ -102,8 +95,9 @@ export default function NetworkArrow({
       const midLat = (start.lat + end.lat) / 2;
       const midLng = (start.lng + end.lng) / 2;
 
+      // CORRIGÉ : comparaisons alignées sur les valeurs anglaises de l'enum.
       const directionGlyph =
-        direction === 'entrant' ? '&larr;' : direction === 'entrant_sortant' ? '&harr;' : '&rarr;';
+        direction === 'incoming' ? '&larr;' : direction === 'both' ? '&harr;' : '&rarr;';
       let labelText = `${escapeHtml(fromName)} ${directionGlyph} ${escapeHtml(toName)}`;
       if (status !== 'operational') {
         labelText += ` &middot; ${escapeHtml(LINK_STATUS_LABELS[status])}`;

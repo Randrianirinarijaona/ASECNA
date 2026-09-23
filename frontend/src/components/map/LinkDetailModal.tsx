@@ -93,7 +93,7 @@ export default function LinkDetailModal({
           </div>
         </div>
 
-        <div className="network-modal-body">
+        <div className="network-modal-body network-modal-body--scroll">
           {/* NOUVEAU : bloc d'informations fixes de la liaison (direction,
               type, circuit, IP, port, statut). */}
           <div className="network-modal-category">

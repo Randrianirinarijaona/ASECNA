@@ -86,3 +86,17 @@ def set_local_network_membership(db: Session, airport: Airport, member: bool) ->
     db.commit()
     db.refresh(airport)
     return airport
+
+
+def update_airport(db: Session, airport: Airport, name: str | None = None, iata: str | None = None) -> Airport:
+    """NOUVEAU : modification du nom / code IATA d'un aéroport existant
+    (NetworkModal.tsx, admin uniquement). La clé (`key`) n'est jamais
+    modifiée : elle reste l'identifiant stable utilisé par les items
+    réseau, liaisons et points techniques locaux qui y sont rattachés."""
+    if name is not None:
+        airport.name = name
+    if iata is not None:
+        airport.iata = iata
+    db.commit()
+    db.refresh(airport)
+    return airport

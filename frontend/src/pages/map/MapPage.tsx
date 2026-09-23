@@ -100,11 +100,6 @@ interface OffscreenTarget {
   color: string;
 }
 
-// NOUVEAU : conserve le zoom par défaut de la carte (pas de zoom
-// automatique pour englober tous les aéroports d'une liaison) et affiche,
-// en bordure de fenêtre, une flèche + le nom de tout aéroport concerné par
-// une liaison active mais actuellement hors champ de vision. Recalculé à
-// chaque déplacement/zoom de la carte.
 function OffscreenAirportIndicators({ targets }: { targets: OffscreenTarget[] }) {
   const map = useMap();
   const [, setTick] = useState(0);
@@ -178,6 +173,7 @@ export default function MapPage() {
     isLoading,
     error,
     addAirport,
+    updateAirport,
     addTechnicalPoint,
     deleteAirport,
     addNetworkItem,
@@ -241,16 +237,14 @@ export default function MapPage() {
   const [pendingPointCoords, setPendingPointCoords] = useState<[number, number] | null>(null);
   const [newPointName, setNewPointName] = useState('');
 
-  // NOUVEAU : finalisation d'une liaison créée via le flux "2 clics" sur la
-  // carte — collecte direction/type/circuit/IP/port (obligatoires pour
-  // l'IP et le port) avant validation.
   const [pendingLinkDetails, setPendingLinkDetails] = useState<{
     category: NetworkCategoryKey;
     itemTitle: string;
     fromAirportKey: string;
     toAirportKey: string;
   } | null>(null);
-  const [pendingLinkDirection, setPendingLinkDirection] = useState<LinkDirection>('sortant');
+  // CORRIGÉ : valeur par défaut alignée sur le backend ('outgoing').
+  const [pendingLinkDirection, setPendingLinkDirection] = useState<LinkDirection>('outgoing');
   const [pendingLinkType, setPendingLinkType] = useState('');
   const [pendingLinkCircuit, setPendingLinkCircuit] = useState('');
   const [pendingLinkIp, setPendingLinkIp] = useState('');
@@ -258,7 +252,7 @@ export default function MapPage() {
 
   const closePendingLinkDetails = useCallback(() => {
     setPendingLinkDetails(null);
-    setPendingLinkDirection('sortant');
+    setPendingLinkDirection('outgoing');
     setPendingLinkType('');
     setPendingLinkCircuit('');
     setPendingLinkIp('');
@@ -304,8 +298,6 @@ export default function MapPage() {
 
   const handleAirportMarkerClick = (key: string) => {
     if (linkingState) {
-      // MODIFIÉ : au lieu de créer la liaison immédiatement, on ouvre la
-      // fenêtre de finalisation (direction + type/circuit + IP/port).
       if (key !== linkingState.fromAirportKey) {
         setPendingLinkDetails({
           category: linkingState.category,
@@ -368,7 +360,6 @@ export default function MapPage() {
           itemTitle: l.itemTitle,
           fromName: from.name,
           toName: to.name,
-          // MODIFIÉ : direction/statut remplacent l'ancien `bidirectional`.
           direction: l.direction,
           status: l.status,
         };
@@ -609,8 +600,6 @@ export default function MapPage() {
                 />
               ))}
 
-            {/* NOUVEAU : indicateurs d'aéroports hors champ de vision pour
-                les liaisons actuellement affichées. */}
             {networkUsage && (
               <OffscreenAirportIndicators
                 targets={networkConnections.flatMap((conn) => [
@@ -643,6 +632,7 @@ export default function MapPage() {
                 deleteAirport(key);
                 setSelectedAirportKey(null);
               }}
+              onUpdateAirport={updateAirport}
               onAddItem={(category, item) => addNetworkItem(selectedAirportKey, category, item as any)}
               onDeleteItem={(category, title) => deleteNetworkItem(selectedAirportKey, category, title)}
               onUpdateItemStatus={updateNetworkItemStatus}
@@ -779,7 +769,6 @@ export default function MapPage() {
         </div>
       </Modal>
 
-      {/* NOUVEAU : finalisation de la liaison créée via le flux "2 clics". */}
       {pendingLinkDetails && (
         <Modal
           isOpen
@@ -824,14 +813,15 @@ export default function MapPage() {
 
           <div className="form-group text-left">
             <label className="form-label">Direction</label>
+            {/* CORRIGÉ : valeurs alignées sur l'enum backend */}
             <select
               className="form-input"
               value={pendingLinkDirection}
               onChange={(e) => setPendingLinkDirection(e.target.value as LinkDirection)}
             >
-              <option value="sortant">{LINK_DIRECTION_LABELS.sortant}</option>
-              <option value="entrant">{LINK_DIRECTION_LABELS.entrant}</option>
-              <option value="entrant_sortant">{LINK_DIRECTION_LABELS.entrant_sortant}</option>
+              <option value="outgoing">{LINK_DIRECTION_LABELS.outgoing}</option>
+              <option value="incoming">{LINK_DIRECTION_LABELS.incoming}</option>
+              <option value="both">{LINK_DIRECTION_LABELS.both}</option>
             </select>
           </div>
 

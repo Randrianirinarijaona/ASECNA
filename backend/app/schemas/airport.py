@@ -31,11 +31,20 @@ class ParameterCreate(CamelModel):
 # ─── Aéroport ────────────────────────────────────────────────────────────
 
 class AirportCreate(CamelModel):
+    """MODIFIÉ : `iata` est désormais optionnel (le formulaire
+    AddAirportModal.tsx n'exige plus ce champ)."""
     key: str
     name: str
-    iata: str
+    iata: Optional[str] = ""
     lat: float
     lng: float
+
+
+class AirportUpdate(CamelModel):
+    """NOUVEAU : édition du nom / code IATA d'un aéroport existant, réservée
+    à l'administrateur (NetworkModal.tsx, bouton "Modifier")."""
+    name: Optional[str] = None
+    iata: Optional[str] = None
 
 
 class TechnicalPointCreate(CamelModel):

@@ -1,9 +1,7 @@
 // hooks/useAirportsData.ts
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Airport, Parameter } from '../types';
-import {
-  ANTANANARIVO_AIRPORT_KEY,
-} from '../data/networkCategories';
+import { ANTANANARIVO_AIRPORT_KEY } from '../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink, LinkDirection, LinkStatus } from '../data/networkCategories';
 import {
   airportService,
@@ -100,6 +98,21 @@ export function useAirportsData() {
         setAirports((prev) => ({ ...prev, [createdKey]: rest }));
       } catch (err) {
         handleError(err, "Impossible de créer l'aéroport");
+      }
+    },
+    [handleError]
+  );
+
+  // NOUVEAU : modification du nom / code IATA d'un aéroport existant
+  // (NetworkModal.tsx, admin uniquement).
+  const updateAirport = useCallback(
+    async (key: string, updates: { name?: string; iata?: string }) => {
+      try {
+        const updated = await airportService.update(key, updates);
+        const { key: updatedKey, ...rest } = updated;
+        setAirports((prev) => ({ ...prev, [updatedKey]: rest }));
+      } catch (err) {
+        handleError(err, "Impossible de modifier l'aéroport");
       }
     },
     [handleError]
@@ -353,8 +366,6 @@ export function useAirportsData() {
     ) => {
       if (fromAirportKey === toAirportKey) return;
 
-      // NOUVEAU : garde-fou (défense en profondeur) — le point de départ
-      // doit toujours être Antananarivo, même si l'UI l'impose déjà.
       if (fromAirportKey !== ANTANANARIVO_AIRPORT_KEY) {
         showToast("Le point de départ d'une liaison doit être Antananarivo.", 'error');
         return;
@@ -367,23 +378,7 @@ export function useAirportsData() {
 
       try {
         const created = await linkService.create(category, itemTitle, fromAirportKey, toAirportKey, details);
-        // NOTE BACKEND : tant que l'API ne renvoie pas encore direction /
-        // linkType / circuit / ipAddress / port / status (évolution du
-        // schéma à faire côté FastAPI — cf. remarque de fin de réponse), on
-        // fusionne localement les champs saisis pour que l'UI reste
-        // cohérente dans la session en cours.
-        setLinks((prev) => [
-          ...prev,
-          {
-            ...created,
-            direction: details.direction,
-            linkType: details.linkType,
-            circuit: details.circuit,
-            ipAddress: details.ipAddress,
-            port: details.port,
-            status: created.status ?? 'operational',
-          },
-        ]);
+        setLinks((prev) => [...prev, created]);
       } catch (err) {
         handleError(err, 'Impossible de créer cette liaison (peut-être déjà existante)');
       }
@@ -403,13 +398,17 @@ export function useAirportsData() {
     [handleError]
   );
 
-  // NOUVEAU : changement d'état d'une liaison (Opérationnel / Maintenance /
-  // Hors service). Purement local pour l'instant — aucun endpoint backend
-  // dédié n'existe encore pour persister ce champ (cf. remarque de fin de
-  // réponse sur l'évolution du schéma API).
-  const updateLinkStatus = useCallback((linkId: string, status: LinkStatus) => {
-    setLinks((prev) => prev.map((l) => (l.id === linkId ? { ...l, status } : l)));
-  }, []);
+  const updateLinkStatus = useCallback(
+    async (linkId: string, status: LinkStatus) => {
+      try {
+        const updated = await linkService.updateStatus(linkId, status);
+        setLinks((prev) => prev.map((l) => (l.id === linkId ? updated : l)));
+      } catch (err) {
+        handleError(err, "Impossible de mettre à jour le statut de la liaison");
+      }
+    },
+    [handleError]
+  );
 
   const getLinksForAirport = useCallback(
     (airportKey: string, category?: NetworkCategoryKey) =>
@@ -768,6 +767,7 @@ export function useAirportsData() {
     isLoading,
     error,
     addAirport,
+    updateAirport,
     addTechnicalPoint,
     deleteAirport,
     addNetworkItem,

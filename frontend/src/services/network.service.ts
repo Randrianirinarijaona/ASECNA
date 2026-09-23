@@ -32,6 +32,14 @@ export const airportService = {
       body: JSON.stringify(payload),
     }),
 
+  // NOUVEAU : modification du nom / code IATA d'un aéroport existant
+  // (NetworkModal.tsx, admin uniquement — PATCH /airports/{key}).
+  update: (key: string, payload: { name?: string; iata?: string }): Promise<AirportApiResult> =>
+    request<AirportApiResult>(`/airports/${encodeURIComponent(key)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   remove: (key: string): Promise<{ message: string }> =>
     request(`/airports/${encodeURIComponent(key)}`, { method: 'DELETE' }),
 
@@ -131,23 +139,10 @@ export const networkService = {
   toggleSubParameterStatus: (subId: string): Promise<NetworkItemApiResult['subParameters'][number]> =>
     request(`/network/sub-parameters/${subId}/toggle-status`, { method: 'PATCH' }),
 
-  getUsage: (
-    category: NetworkCategoryKey,
-    subItem: string
-  ): Promise<{
-    key: string;
-    matchedTitle: string;
-    status?: string;
-    airportName: string;
-    airportIata: string;
-  }[]> =>
-    request<{
-      key: string;
-      matchedTitle: string;
-      status?: string;
-      airportName: string;
-      airportIata: string;
-    }[]>(`/network/usage/${category}/${encodeURIComponent(subItem)}`),
+  getUsage: (category: NetworkCategoryKey, subItem: string) =>
+    request<
+      { key: string; matchedTitle: string; status?: string; airportName: string; airportIata: string }[]
+    >(`/network/usage/${category}/${encodeURIComponent(subItem)}`),
 };
 
 // ─── Liaisons (NetworkLink) ───────────────────────────────────────────────
@@ -155,9 +150,6 @@ export const networkService = {
 export const linkService = {
   list: (): Promise<NetworkLink[]> => request<NetworkLink[]>('/links'),
 
-  // MODIFIÉ : remplace le paramètre `bidirectional` par un objet `details`
-  // regroupant la direction (Entrant/Sortant/Entrant et sortant) et les
-  // nouvelles propriétés de liaison (type, circuit, IP, port).
   create: (
     category: NetworkCategoryKey,
     itemTitle: string,
@@ -184,6 +176,12 @@ export const linkService = {
         ipAddress: details.ipAddress,
         port: details.port,
       }),
+    }),
+
+  updateStatus: (linkId: string, status: string): Promise<NetworkLink> =>
+    request<NetworkLink>(`/links/${linkId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     }),
 
   remove: (linkId: string): Promise<{ message: string }> => request(`/links/${linkId}`, { method: 'DELETE' }),

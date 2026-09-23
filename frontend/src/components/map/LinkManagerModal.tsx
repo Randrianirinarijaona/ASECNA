@@ -20,9 +20,6 @@ interface LinkManagerModalProps {
   mode: 'add' | 'remove';
   airports: AirportsMap;
   links: NetworkLink[];
-  // MODIFIÉ : le paramètre `bidirectional` est remplacé par un objet de
-  // détails regroupant direction + type/circuit optionnels + IP/port
-  // obligatoires (cf. consigne "ajout de liaison — nouvelles propriétés").
   onAddLink: (
     category: NetworkCategoryKey,
     itemTitle: string,
@@ -50,14 +47,13 @@ export default function LinkManagerModal({
   onDeleteLink,
   onClose,
 }: LinkManagerModalProps) {
-  // NOUVEAU : le point de départ est désormais figé sur Antananarivo — plus
-  // aucun choix possible dans le formulaire (cf. consigne "Tous les points
-  // de départ doivent obligatoirement être sur Antananarivo").
   const antananarivoAirport = airports[ANTANANARIVO_AIRPORT_KEY];
   const airportEntries = Object.entries(airports).filter(([key]) => key !== ANTANANARIVO_AIRPORT_KEY);
 
   const [toKey, setToKey] = useState('');
-  const [direction, setDirection] = useState<LinkDirection>('sortant');
+  // CORRIGÉ : valeur par défaut alignée sur le backend ('outgoing' au lieu
+  // de 'sortant').
+  const [direction, setDirection] = useState<LinkDirection>('outgoing');
   const [linkType, setLinkType] = useState('');
   const [circuit, setCircuit] = useState('');
   const [ipAddress, setIpAddress] = useState('');
@@ -79,7 +75,7 @@ export default function LinkManagerModal({
       port: port.trim(),
     });
     setToKey('');
-    setDirection('sortant');
+    setDirection('outgoing');
     setLinkType('');
     setCircuit('');
     setIpAddress('');
@@ -99,7 +95,7 @@ export default function LinkManagerModal({
           </button>
         </div>
 
-        <div className="network-modal-body">
+        <div className="network-modal-body network-modal-body--scroll">
           {mode === 'add' ? (
             !antananarivoAirport ? (
               <p className="network-empty">
@@ -108,7 +104,6 @@ export default function LinkManagerModal({
             ) : (
               <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
                 <label>Aéroport de départ</label>
-                {/* MODIFIÉ : champ figé (lecture seule), toujours Antananarivo. */}
                 <input
                   className="form-input"
                   value={
@@ -130,19 +125,19 @@ export default function LinkManagerModal({
                   ))}
                 </select>
 
-                {/* MODIFIÉ : remplace le sélecteur "Unidirectionnelle / Bidirectionnelle" */}
                 <label>Direction</label>
+                {/* CORRIGÉ : les valeurs des <option> correspondent
+                    désormais exactement à l'enum backend. */}
                 <select
                   className="form-input"
                   value={direction}
                   onChange={(e) => setDirection(e.target.value as LinkDirection)}
                 >
-                  <option value="sortant">{LINK_DIRECTION_LABELS.sortant}</option>
-                  <option value="entrant">{LINK_DIRECTION_LABELS.entrant}</option>
-                  <option value="entrant_sortant">{LINK_DIRECTION_LABELS.entrant_sortant}</option>
+                  <option value="outgoing">{LINK_DIRECTION_LABELS.outgoing}</option>
+                  <option value="incoming">{LINK_DIRECTION_LABELS.incoming}</option>
+                  <option value="both">{LINK_DIRECTION_LABELS.both}</option>
                 </select>
 
-                {/* NOUVEAU */}
                 <label>Type (optionnel)</label>
                 <input
                   className="form-input"
@@ -209,7 +204,6 @@ export default function LinkManagerModal({
                             flexShrink: 0,
                           }}
                         />
-                        {/* NOUVEAU : petit indicateur de statut */}
                         <span
                           style={{
                             width: 6,

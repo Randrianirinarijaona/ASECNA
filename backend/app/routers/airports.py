@@ -4,10 +4,10 @@ from app.crud import airport as airport_crud
 from app.crud import link as link_crud
 from app.crud import user as user_crud
 from app.database import get_db
-from app.dependencies import get_current_user, require_write_access
+from app.dependencies import get_current_user, require_write_access, require_admin
 from app.models.network import NetworkCategoryEnum
 from app.models.user import User
-from app.schemas.airport import AirportCreate, TechnicalPointCreate, AirportOut, AirportSummaryOut, ParameterOut, ParameterCreate, ParameterValueOut, ParameterValueCreate
+from app.schemas.airport import AirportCreate, AirportUpdate, TechnicalPointCreate, AirportOut, AirportSummaryOut, ParameterOut, ParameterCreate, ParameterValueOut, ParameterValueCreate
 from app.schemas.user import MessageResponse
 
 router = APIRouter(prefix="/airports", tags=["Airports"])
@@ -28,10 +28,37 @@ def get_airport(key: str, _: User = Depends(get_current_user), db: Session = Dep
 
 @router.post("", response_model=AirportOut, status_code=status.HTTP_201_CREATED)
 def create_airport(payload: AirportCreate, current_user: User = Depends(require_write_access), db: Session = Depends(get_db)):
+    """MODIFIÉ : `payload.iata` est désormais optionnel (peut être None ou
+    vide) — normalisé en chaîne vide plutôt que de lever une erreur."""
     key = payload.key.strip().upper()
     if airport_crud.get_airport(db, key):
-        raise HTTPException(status.HTTP_409_CONFLICT, detail=f'Le code IATA "{key}" est déjà utilisé par un autre aéroport')
-    airport_crud.create_airport(db, key, payload.name, payload.iata.strip().upper(), payload.lat, payload.lng)
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=f'La clé "{key}" est déjà utilisée par un autre aéroport')
+    iata = (payload.iata or "").strip().upper()
+    airport_crud.create_airport(db, key, payload.name, iata, payload.lat, payload.lng)
+    return airport_crud.get_airport_out(db, key)
+
+
+@router.patch("/{key}", response_model=AirportOut)
+def update_airport(
+    key: str,
+    payload: AirportUpdate,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """NOUVEAU : modification du nom / code IATA d'un aéroport, réservée à
+    l'administrateur (NetworkModal.tsx). La clé de l'aéroport ne change
+    jamais, seuls `name` et `iata` sont éditables."""
+    airport = airport_crud.get_airport(db, key)
+    if not airport:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Aéroport introuvable")
+
+    name = payload.name.strip() if payload.name is not None else None
+    if name is not None and not name:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Le nom de l'aéroport ne peut pas être vide")
+    iata = payload.iata.strip().upper() if payload.iata is not None else None
+
+    airport_crud.update_airport(db, airport, name=name, iata=iata)
+    user_crud.log_activity(db, current_user, f"Modification de l'aéroport {key} (nom/IATA)")
     return airport_crud.get_airport_out(db, key)
 
 

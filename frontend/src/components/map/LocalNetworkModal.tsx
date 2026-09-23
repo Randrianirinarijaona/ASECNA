@@ -89,7 +89,7 @@ export default function LocalNetworkModal({
           </div>
         </div>
 
-        <div className="network-modal-body">
+        <div className="network-modal-body network-modal-body--scroll">
           <div className="network-modal-category">
             <div className="network-modal-category-header">
               <h3>Paramètres locaux</h3>

@@ -30,7 +30,7 @@ export default function AirportMarker({ airport, onClick, isSelected }: Props) {
       icon={buildAirportIcon(Boolean(isSelected))}
       eventHandlers={{ click: onClick }}
     >
-      <Tooltip direction="top" offset={[0, -16]} opacity={1} className="marker-tooltip">
+      <Tooltip className="marker-tooltip">
         {airport.name}
       </Tooltip>
     </Marker>

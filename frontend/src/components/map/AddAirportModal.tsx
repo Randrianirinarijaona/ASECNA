@@ -10,6 +10,18 @@ interface AddAirportModalProps {
   onSubmit: (key: string, airport: Airport) => void;
 }
 
+// NOUVEAU : dérive une clé lisible à partir du nom quand aucun code IATA
+// n'est fourni (majuscules, sans accents, espaces -> tirets).
+function slugifyName(value: string): string {
+  return value
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/(^-+|-+$)/g, '');
+}
+
 export default function AddAirportModal({ existingKeys, onClose, onSubmit }: AddAirportModalProps) {
   const [name, setName] = useState('');
   const [iata, setIata] = useState('');
@@ -18,8 +30,10 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
-    if (!name.trim() || !iata.trim() || !lat || !lng) {
-      setError('Tous les champs sont obligatoires');
+    // MODIFIÉ : le code IATA n'est plus obligatoire (seuls nom, latitude
+    // et longitude le restent).
+    if (!name.trim() || !lat || !lng) {
+      setError('Le nom, la latitude et la longitude sont obligatoires');
       return;
     }
     const latNum = parseFloat(lat);
@@ -29,16 +43,39 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
       return;
     }
 
-    const key = iata.trim().toUpperCase();
+    const trimmedIata = iata.trim();
 
-    if (existingKeys.includes(key)) {
-      setError(`Le code IATA "${key}" est déjà utilisé par un autre aéroport`);
+    if (trimmedIata) {
+      // Comportement STRICTEMENT inchangé : la clé est le code IATA saisi.
+      const key = trimmedIata.toUpperCase();
+      if (existingKeys.includes(key)) {
+        setError(`Le code IATA "${key}" est déjà utilisé par un autre aéroport`);
+        return;
+      }
+      onSubmit(key, {
+        name: name.trim(),
+        iata: key,
+        coords: [latNum, lngNum],
+        sections: { sfa: [], sma: [], srna: [] },
+      } as Airport);
+      onClose();
       return;
+    }
+
+    // NOUVEAU : pas de code IATA -> la clé est dérivée automatiquement du
+    // nom, en garantissant son unicité (aucune saisie supplémentaire
+    // requise de la part de l'utilisateur).
+    const baseKey = slugifyName(name) || `AEROPORT-${Date.now()}`;
+    let key = baseKey;
+    let suffix = 2;
+    while (existingKeys.includes(key)) {
+      key = `${baseKey}-${suffix}`;
+      suffix += 1;
     }
 
     onSubmit(key, {
       name: name.trim(),
-      iata: key,
+      iata: '',
       coords: [latNum, lngNum],
       sections: { sfa: [], sma: [], srna: [] },
     } as Airport);
@@ -66,7 +103,8 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
             />
           </label>
           <label>
-            Code IATA
+            {/* MODIFIÉ : indication "(optionnel)" */}
+            Code IATA (optionnel)
             <input
               className="form-input"
               value={iata}
