@@ -113,7 +113,7 @@ export default function NetworkArrow({
             font-size: 11px;
             font-weight: 600;
             color: ${effectiveColor};
-            border: 1px solid var(--color-border, #e2e8f0);
+            border: 1px solid var(--color-border, #ffffff);
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0,0,0,0.12);
             pointer-events: none;
@@ -150,7 +150,7 @@ export default function NetworkArrow({
       if (reverseDecorator) reverseDecorator.on('click', onClick);
 
       polyline.on('mouseover', () => polyline.setStyle({ opacity: 1, weight: weight + 2 }));
-      polyline.on('mouseout', () => polyline.setStyle({ opacity: baseOpacity, weight }));
+      polyline.on('mouseout', () => polyline.setStyle({ opacity: baseOpacity, weight:2 }));
     }
 
     return () => {

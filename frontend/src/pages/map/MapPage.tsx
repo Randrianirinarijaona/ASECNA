@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, createElement } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
@@ -76,7 +76,7 @@ function LocalPointClickCatcher({
   onPick: (coords: [number, number]) => void;
 }) {
   useMapEvents({
-    click(e) {
+    click(e: { latlng: { lat: number; lng: number } }) {
       if (!active) return;
       onPick([e.latlng.lat, e.latlng.lng]);
     },
@@ -153,7 +153,12 @@ function OffscreenAirportIndicators({ targets }: { targets: OffscreenTarget[] })
           iconSize: [0, 0],
         });
 
-        return <Marker key={target.id} position={edgeLatLng} icon={icon} interactive={false} />;
+        return createElement(Marker as any, {
+          key: target.id,
+          position: edgeLatLng,
+          icon,
+          interactive: false,
+        });
       })}
     </>
   );
