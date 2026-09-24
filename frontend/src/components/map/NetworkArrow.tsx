@@ -91,58 +91,7 @@ export default function NetworkArrow({
 
     let label: L.Marker | null = null;
 
-    if (fromName && toName) {
-      const midLat = (start.lat + end.lat) / 2;
-      const midLng = (start.lng + end.lng) / 2;
-
-      // CORRIGÉ : comparaisons alignées sur les valeurs anglaises de l'enum.
-      const directionGlyph =
-        direction === 'incoming' ? '&larr;' : direction === 'both' ? '&harr;' : '&rarr;';
-      let labelText = `${escapeHtml(fromName)} ${directionGlyph} ${escapeHtml(toName)}`;
-      if (status !== 'operational') {
-        labelText += ` &middot; ${escapeHtml(LINK_STATUS_LABELS[status])}`;
-      }
-
-      label = L.marker([midLat, midLng], {
-        icon: L.divIcon({
-          className: 'network-arrow-label-icon',
-          html: `<div style="
-            background: var(--color-card, #ffffff);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            color: ${effectiveColor};
-            border: 1px solid var(--color-border, #ffffff);
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            transition: all 0.2s ease;
-          ">${labelText}</div>`,
-        }),
-        interactive: false,
-        zIndexOffset: 1000,
-        opacity: 0,
-      });
-      label.addTo(map);
-
-      const updateVisibility = () => {
-        if (!label) return;
-        const bounds = map.getBounds();
-        const bothEndsVisible = bounds.contains(start) && bounds.contains(end);
-        label.setOpacity(bothEndsVisible ? 0 : 1);
-      };
-
-      updateVisibility();
-      map.on('move', updateVisibility);
-      map.on('zoom', updateVisibility);
-
-      cleanupRef.current = () => {
-        map.off('move', updateVisibility);
-        map.off('zoom', updateVisibility);
-      };
-    }
+    
 
     if (onClick) {
       polyline.on('click', onClick);
