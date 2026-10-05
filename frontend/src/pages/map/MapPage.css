@@ -1,4 +1,13 @@
+/* ==========================================================================
+   MapPage — carte des aéroports
+   Motion : entrée douce, bannière "mode" qui respire,
+   contrôles Leaflet qui répondent aux actions.
+   ========================================================================== */
+
 .map-page {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -6,6 +15,7 @@
   background-color: var(--color-bg);
   color: var(--color-text);
   transition: background-color 0.2s ease, color 0.2s ease;
+  animation: map-fade 0.6s ease backwards;
 }
 
 .map-container {
@@ -21,29 +31,65 @@
   height: 100%;
 }
 
+/* --------------------------------------------------------------------------
+   Bannière de mode (liaison / vue locale)
+   Entre par le bas avec un léger rebond, puis son contour respire
+   tant que le mode est actif.
+   -------------------------------------------------------------------------- */
 .linking-banner {
   position: absolute;
   bottom: 50px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1010;
+
+  /* CORRECTION : avec left: 50%, la largeur disponible n'était que de 50 %
+     du conteneur, donc le texte se coupait trop tôt. */
+  width: max-content;
+  max-width: calc(100% - 2rem);
+
   background: var(--color-card);
   color: var(--color-text);
   padding: 12px 24px;
   border-radius: 30px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  text-align: center;
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
   border: 1px solid var(--color-primary);
-  animation: slideDown 0.2s cubic-bezier(0.16,et 1, 0.3, 1);
+  animation:
+    map-banner-in 0.6s var(--ease-spring),
+    map-banner-glow 2.6s ease-in-out 0.6s infinite;
 }
 
-@keyframes slideDown {
-  from { transform: translate(-50%, -20px); opacity: 0; }
-  to { transform: translate(-50%, 0); opacity: 1; }
+/* CORRECTION : le .tsx peut afficher deux bannières en même temps
+   (liaison + vue locale) ; la seconde se place au-dessus de la première. */
+.linking-banner + .linking-banner {
+  bottom: 110px;
+}
+
+@keyframes map-banner-in {
+  from { transform: translate(-50%, 30px) scale(0.92); opacity: 0; }
+  to   { transform: translate(-50%, 0) scale(1);       opacity: 1; }
+}
+
+/* La lueur suit la couleur primaire du thème (au lieu d'un violet fixe) */
+@keyframes map-banner-glow {
+  0%, 100% {
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.15),
+      0 0 0 0 color-mix(in srgb, var(--color-primary) 35%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.15),
+      0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent);
+  }
 }
 
 .linking-banner-cancel {
@@ -55,15 +101,116 @@
   font-size: 0.775rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.35s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
 }
 
 .linking-banner-cancel:hover {
   background: var(--color-danger);
   color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px -4px rgba(239, 68, 68, 0.4);
+}
+
+.linking-banner-cancel:active {
+  transform: scale(0.94);
+  transition-duration: 0.1s;
+}
+
+.linking-banner-cancel:focus-visible {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 2px;
+}
+
+/* CORRECTION : ce bouton vient de la sidebar et héritait de `width: 100%`,
+   ce qui le forçait sur sa propre ligne dans la bannière. On le remet en
+   pilule, assorti au bouton d'annulation. */
+.linking-banner .sidebar-action-btn {
+  width: auto;
+  padding: 4px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+  color: var(--color-primary);
+  font-size: 0.775rem;
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.35s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
+}
+
+.linking-banner .sidebar-action-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px -4px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+
+.linking-banner .sidebar-action-btn:active {
+  transform: scale(0.94);
+  transition-duration: 0.1s;
+}
+
+/* --------------------------------------------------------------------------
+   Mode "placer un point" : curseur en croix.
+   Nécessite d'ajouter la classe côté .tsx (voir note de livraison).
+   -------------------------------------------------------------------------- */
+.map-wrapper--picking .leaflet-container,
+.map-wrapper--picking .leaflet-grab,
+.map-wrapper--picking .leaflet-interactive {
+  cursor: crosshair;
+}
+
+/* --------------------------------------------------------------------------
+   Leaflet
+   (on n'anime jamais `transform` sur les marqueurs : Leaflet s'en sert pour
+   les positionner. On n'anime pas non plus .offscreen-indicator-icon : le
+   .tsx recrée ces icônes à chaque déplacement de la carte, l'animation
+   repartirait en boucle et clignoterait.)
+   -------------------------------------------------------------------------- */
+.map-page .leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-control-zoom {
+  animation: map-control-in 0.7s var(--ease-out) 0.3s backwards;
+}
+
+@keyframes map-control-in {
+  from { opacity: 0; translate: -12px 0; }
+  to   { opacity: 1; translate: 0 0; }
+}
+
+.leaflet-bar a {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.leaflet-bar a:active {
+  background-color: var(--color-bg);
+}
+
+.leaflet-popup-content-wrapper {
+  animation: map-popup-in 0.4s var(--ease-spring);
+  transform-origin: bottom center;
+}
+
+@keyframes map-popup-in {
+  from { opacity: 0; scale: 0.85; translate: 0 8px; }
+  to   { opacity: 1; scale: 1;    translate: 0 0; }
 }
 
 /* Corrections thématiques Leaflet */
+
+/* CORRECTION : sans ça, le fond gris clair de Leaflet flashe pendant le
+   chargement des tuiles en mode sombre. */
+[data-theme="dark"] .leaflet-container {
+  background: var(--color-bg);
+}
+
 [data-theme="dark"] .leaflet-bar a {
   background-color: var(--color-card);
   border-bottom: 1px solid var(--color-border);
@@ -88,12 +235,45 @@
   filter: brightness(0.85) contrast(1.05);
 }
 
-
+/* --------------------------------------------------------------------------
+   États de chargement / erreur
+   (contiennent <Spinner> ou <p class="form-error"> d'après le .tsx)
+   -------------------------------------------------------------------------- */
 .map-page--loading {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100vh;
+  padding: 1.5rem;
 }
 
-.linking-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.map-page--loading .form-error {
+  max-width: 480px;
+  text-align: center;
+  line-height: 1.5;
+  animation: map-error-in 0.5s var(--ease-spring);
+}
+
+@keyframes map-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes map-error-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Accessibilité : on coupe tout si l'utilisateur le demande
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .map-page *,
+  .map-page *::before,
+  .map-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

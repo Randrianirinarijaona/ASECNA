@@ -1,4 +1,13 @@
+/* ==========================================================================
+   MapHeader
+   Moment mémorable : un point lumineux parcourt le bas du header,
+   comme un avion sur sa route (le même motif revient dans la sidebar).
+   ========================================================================== */
+
 .map-header {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,15 +20,49 @@
   box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
 }
 
+/* Le tracé de vol : un segment lumineux qui traverse le bord inférieur */
+.map-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-primary) 50%,
+    transparent 100%
+  );
+  background-size: 30% 100%;
+  background-repeat: no-repeat;
+  background-position: -40% 0;
+  opacity: 0.9;
+  pointer-events: none;
+  animation: hd-flight 7s cubic-bezier(0.45, 0, 0.55, 1) 1.5s infinite;
+}
+
 .map-header-left h1 {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--color-text) 30%, var(--color-primary) 100%);
+
+  /* Calque 1 : reflet qui passe une fois à l'arrivée
+     Calque 2 : le dégradé d'origine */
+  background:
+    linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.85) 50%, transparent 58%),
+    linear-gradient(135deg, var(--color-text) 30%, var(--color-primary) 100%);
+  background-size: 260% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: 160% 0, 0 0;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+
+  animation:
+    hd-title-in 0.9s var(--ease-out) backwards,
+    hd-shine 1.6s ease-in-out 0.9s 1;
 }
 
 .map-header-left p {
@@ -29,4 +72,45 @@
   font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  animation: hd-rise 0.8s var(--ease-out) 0.3s backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Keyframes
+   -------------------------------------------------------------------------- */
+@keyframes hd-title-in {
+  from { clip-path: inset(0 100% 0 0); opacity: 0; transform: translateX(-10px); }
+  to   { clip-path: inset(0 0 0 0);    opacity: 1; transform: none; }
+}
+
+@keyframes hd-shine {
+  from { background-position: 160% 0, 0 0; }
+  to   { background-position: -60% 0, 0 0; }
+}
+
+@keyframes hd-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes hd-flight {
+  0%   { background-position: -40% 0; }
+  55%,
+  100% { background-position: 140% 0; } /* pause en fin de cycle */
+}
+
+/* --------------------------------------------------------------------------
+   Accessibilité
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .map-header,
+  .map-header *,
+  .map-header::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .map-header::after {
+    display: none;
+  }
 }

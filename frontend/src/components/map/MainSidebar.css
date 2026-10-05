@@ -1,4 +1,13 @@
+/* ==========================================================================
+   MainSidebar
+   Entrée en cascade, indicateur d'item actif qui "pousse", accordéons qui
+   se déroulent, et le tracé de vol sous le titre (clin d'œil au header).
+   ========================================================================== */
+
 .main-sidebar {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   width: 240px;
   flex-shrink: 0;
   background-color: var(--color-card);
@@ -10,11 +19,29 @@
   height: 100%;
   overflow-y: auto;
   transition: background-color 0.2s ease, border-color 0.2s ease;
+  animation: sb-slide-in 0.8s var(--ease-out) backwards;
 }
 
 .main-sidebar-header {
+  position: relative;
   padding: 0 4px 12px;
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Point lumineux qui parcourt la ligne sous le titre */
+.main-sidebar-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background-image: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  background-size: 45% 100%;
+  background-repeat: no-repeat;
+  background-position: -60% 0;
+  pointer-events: none;
+  animation: sb-flight 7s cubic-bezier(0.45, 0, 0.55, 1) 2s infinite;
 }
 
 .main-sidebar-title {
@@ -23,6 +50,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--color-primary);
+  animation: sb-rise 0.7s var(--ease-out) 0.2s backwards;
 }
 
 .main-sidebar-nav {
@@ -31,7 +59,11 @@
   gap: 6px;
 }
 
+/* --------------------------------------------------------------------------
+   Navigation principale
+   -------------------------------------------------------------------------- */
 .main-sidebar-btn {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -45,12 +77,61 @@
   color: var(--color-text-muted);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.4s var(--ease-spring);
+  animation: sb-rise 0.7s var(--ease-out) backwards;
+  animation-delay: 0.3s;
+}
+
+.main-sidebar-nav > *:nth-child(2) .main-sidebar-btn,
+.main-sidebar-nav > .main-sidebar-btn:nth-child(2) { animation-delay: 0.38s; }
+.main-sidebar-nav > *:nth-child(3) .main-sidebar-btn,
+.main-sidebar-nav > .main-sidebar-btn:nth-child(3) { animation-delay: 0.46s; }
+.main-sidebar-nav > *:nth-child(n + 4) .main-sidebar-btn,
+.main-sidebar-nav > .main-sidebar-btn:nth-child(n + 4) { animation-delay: 0.54s; }
+
+/* Barre d'accent qui pousse depuis le centre pour l'item actif */
+.main-sidebar-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-primary);
+  transform: scaleY(0);
+  transition: transform 0.4s var(--ease-spring);
+}
+
+.main-sidebar-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.45s var(--ease-spring);
 }
 
 .main-sidebar-btn:hover {
   background: var(--color-bg);
   color: var(--color-text);
+  transform: translateX(3px);
+}
+
+.main-sidebar-btn:hover svg {
+  transform: scale(1.15) rotate(-6deg);
+}
+
+.main-sidebar-btn:active {
+  transform: translateX(3px) scale(0.97);
+  transition-duration: 0.1s;
+}
+
+.main-sidebar-btn:focus-visible,
+.network-category-btn:focus-visible,
+.network-subitem-btn:focus-visible,
+.main-sidebar-add-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .main-sidebar-btn--active {
@@ -59,6 +140,17 @@
   font-weight: 600;
 }
 
+.main-sidebar-btn--active::before {
+  transform: scaleY(1);
+}
+
+.main-sidebar-btn--active svg {
+  transform: scale(1.1);
+}
+
+/* --------------------------------------------------------------------------
+   Bouton "ajouter"
+   -------------------------------------------------------------------------- */
 .main-sidebar-add-btn {
   display: flex;
   align-items: center;
@@ -73,11 +165,31 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background 0.25s ease,
+    transform 0.4s var(--ease-spring),
+    box-shadow 0.35s var(--ease-out);
+  animation: sb-rise 0.7s var(--ease-out) 0.6s backwards;
+}
+
+.main-sidebar-add-btn svg {
+  transition: transform 0.5s var(--ease-spring);
 }
 
 .main-sidebar-add-btn:hover {
   background: rgba(99, 102, 241, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -8px rgba(99, 102, 241, 0.5);
+}
+
+/* Le "+" fait un quart de tour */
+.main-sidebar-add-btn:hover svg {
+  transform: rotate(90deg) scale(1.15);
+}
+
+.main-sidebar-add-btn:active {
+  transform: scale(0.97);
+  transition-duration: 0.1s;
 }
 
 .main-sidebar-section {
@@ -86,8 +198,12 @@
   gap: 6px;
   padding-top: 12px;
   border-top: 1px solid var(--color-border);
+  animation: sb-rise 0.7s var(--ease-out) 0.55s backwards;
 }
 
+/* --------------------------------------------------------------------------
+   Catégories réseau (accordéons)
+   -------------------------------------------------------------------------- */
 .network-category {
   margin-bottom: 4px;
 }
@@ -106,17 +222,32 @@
   letter-spacing: 0.04em;
   color: var(--color-text);
   cursor: pointer;
+  transition: background 0.25s ease, transform 0.35s var(--ease-spring);
+}
+
+.network-category-btn:hover {
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg));
+}
+
+.network-category-btn:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
 }
 
 .chevron {
-  transition: transform 0.15s ease;
+  transition: transform 0.5s var(--ease-spring), color 0.25s ease;
   color: var(--color-text-muted);
+}
+
+.network-category-btn:hover .chevron {
+  color: var(--color-primary);
 }
 
 .chevron--open {
   transform: rotate(180deg);
 }
 
+/* La liste se déroule de haut en bas quand on ouvre la catégorie */
 .network-subitem-list {
   list-style: none;
   margin: 4px 0 8px;
@@ -124,12 +255,25 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  animation: sb-unfold 0.5s var(--ease-out);
 }
 
+.network-subitem-list > * {
+  animation: sb-item-in 0.5s var(--ease-out) backwards;
+}
+
+.network-subitem-list > *:nth-child(1) { animation-delay: 0.05s; }
+.network-subitem-list > *:nth-child(2) { animation-delay: 0.1s; }
+.network-subitem-list > *:nth-child(3) { animation-delay: 0.15s; }
+.network-subitem-list > *:nth-child(4) { animation-delay: 0.2s; }
+.network-subitem-list > *:nth-child(5) { animation-delay: 0.25s; }
+.network-subitem-list > *:nth-child(n + 6) { animation-delay: 0.3s; }
+
 .network-subitem-btn {
+  position: relative;
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 8px 10px 8px 14px;
   border: none;
   background: transparent;
   border-radius: 6px;
@@ -137,18 +281,42 @@
   font-family: 'JetBrains Mono', Consolas, monospace;
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    padding-left 0.35s var(--ease-out);
+}
+
+/* Petit point d'état à gauche du sous-item */
+.network-subitem-btn::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.4s var(--ease-spring);
 }
 
 .network-subitem-btn:hover {
   background: var(--color-bg);
   color: var(--color-primary);
+  padding-left: 18px;
+}
+
+.network-subitem-btn:hover::before,
+.network-subitem-btn--active::before {
+  transform: translateY(-50%) scale(1);
 }
 
 .network-subitem-btn--active {
   background: rgba(99, 102, 241, 0.1);
   color: var(--color-primary);
   font-weight: 600;
+  padding-left: 18px;
 }
 
 /* Actions contextuelles ajustées aux deux modes */
@@ -160,6 +328,7 @@
   padding: 6px;
   background: var(--color-bg);
   border-radius: 6px;
+  animation: sb-unfold 0.4s var(--ease-out);
 }
 
 .sidebar-action-btn {
@@ -175,11 +344,17 @@
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s;
+  transition: background 0.2s ease, transform 0.35s var(--ease-spring);
 }
 
 .sidebar-action-btn:hover {
   background: rgba(99, 102, 241, 0.15);
+  transform: translateX(2px);
+}
+
+.sidebar-action-btn:active {
+  transform: scale(0.96);
+  transition-duration: 0.1s;
 }
 
 .sidebar-action-btn--danger {
@@ -200,9 +375,18 @@
   color: var(--color-text);
   background: var(--color-bg);
   border-radius: 6px;
+  transition: background 0.25s ease, transform 0.35s var(--ease-out);
 }
 
-.network-empty {
+.network-subitem-row:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+  transform: translateX(2px);
+}
+
+/* CORRECTION : `.network-empty` est aussi défini dans NetworkUsageTab.css
+   avec un style différent. On le scope ici à la sidebar pour qu'ils
+   ne s'écrasent plus l'un l'autre. */
+.main-sidebar .network-empty {
   padding: 8px;
   font-size: 12px;
   color: var(--color-text-muted);
@@ -210,25 +394,87 @@
   font-style: italic;
 }
 
-/* Boutons d'icônes génériques */
-.icon-btn {
+/* CORRECTION : `.icon-btn` est aussi défini dans NetworkModal.css (bouton
+   34×34 avec bordure). Les deux versions s'écrasaient selon l'ordre de
+   chargement. Ici la version "compacte" est limitée à la sidebar. */
+.main-sidebar .icon-btn {
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 4px;
+  width: auto;
+  height: auto;
   border-radius: 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-muted);
-  transition: all 0.15s;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.35s var(--ease-spring);
 }
 
-.icon-btn--danger:hover {
+.main-sidebar .icon-btn:hover {
+  color: var(--color-text);
+  transform: scale(1.15);
+}
+
+.main-sidebar .icon-btn:active {
+  transform: scale(0.88);
+  transition-duration: 0.1s;
+}
+
+.main-sidebar .icon-btn--danger:hover {
   background: rgba(239, 68, 68, 0.15);
   color: var(--color-danger);
 }
 
-.icon-btn--sm {
+.main-sidebar .icon-btn--sm {
   padding: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Keyframes
+   -------------------------------------------------------------------------- */
+@keyframes sb-slide-in {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes sb-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes sb-unfold {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-6px); }
+  to   { opacity: 1; clip-path: inset(0 0 0 0);    transform: none; }
+}
+
+@keyframes sb-item-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes sb-flight {
+  0%   { background-position: -60% 0; }
+  55%,
+  100% { background-position: 160% 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Accessibilité
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .main-sidebar,
+  .main-sidebar *,
+  .main-sidebar *::before,
+  .main-sidebar *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .main-sidebar-header::after {
+    display: none;
+  }
 }

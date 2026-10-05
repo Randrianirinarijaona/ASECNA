@@ -3,41 +3,53 @@
    ========================================================================== */
 :root {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  
+}
+
+/* CORRECTION : ces variables étaient sur :root et écrasaient --color-primary,
+   --color-accent… pour toute l'application. Elles ne valent plus que pour
+   la page de connexion. */
+.login-root {
   /* Palette Mode Clair - Inspiré ASECNA */
   --color-primary: #1e3a8a;       /* Bleu Royal Aéronautique profond */
   --color-primary-hover: #172554;
   --color-accent: #0284c7;        /* Bleu ciel actif */
   --color-admin: #d97706;         /* Ambre de sécurité */
   --color-success: #16a34a;
-  
+
   --color-bg-base: rgba(248, 250, 252, 0.2);
   --color-card-bg: rgba(255, 255, 255, 0.6);
   --color-card-border: rgba(255, 255, 255, 0.6);
   --color-card-shadow: rgba(15, 23, 42, 0.08);
-  
+
   --color-text-main: #0f172a;
   --color-text-muted: #475569;
   --color-input-bg: rgba(255, 255, 255, 0.5);
   --color-input-border: #cbd5e1;
+
+  /* Lueurs d'ambiance du fond */
+  --orb-a: rgba(2, 132, 199, 0.32);
+  --orb-b: rgba(30, 58, 138, 0.28);
 }
 
-[data-theme="dark"] {
+[data-theme="dark"] .login-root {
   /* Palette Mode Sombre */
   --color-primary: #38bdf8;       /* Bleu ciel lumineux pour contrastes sombres */
   --color-primary-hover: #7dd3fc;
   --color-accent: #0ea5e9;
   --color-admin: #fbbf24;
-  
+
   --color-bg-base: rgba(15, 23, 42, 0.7);
   --color-card-bg: rgba(30, 41, 59, 0.7);
   --color-card-border: rgba(255, 255, 255, 0.07);
   --color-card-shadow: rgba(0, 0, 0, 0.5);
-  
+
   --color-text-main: #f8fafc;
   --color-text-muted: #94a3b8;
   --color-input-bg: rgba(15, 23, 42, 0.6);
   --color-input-border: #334155;
+
+  --orb-a: rgba(14, 165, 233, 0.22);
+  --orb-b: rgba(99, 102, 241, 0.2);
 }
 
 /* ==========================================================================
@@ -48,6 +60,9 @@
 }
 
 .login-root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   min-height: 100vh;
   display: grid;
   place-items: center;
@@ -65,10 +80,37 @@
 .login-bg-overlay {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   background-color: var(--color-bg-base);
   backdrop-filter: blur(4px);
   z-index: 1;
   transition: background-color 0.4s ease;
+}
+
+/* Deux lueurs qui dérivent lentement derrière la carte (effet "aurore") */
+.login-bg-overlay::before,
+.login-bg-overlay::after {
+  content: '';
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  will-change: transform;
+  pointer-events: none;
+}
+
+.login-bg-overlay::before {
+  top: -20vmax;
+  left: -15vmax;
+  background: radial-gradient(circle, var(--orb-a) 0%, transparent 65%);
+  animation: lg-drift-a 22s ease-in-out infinite alternate;
+}
+
+.login-bg-overlay::after {
+  bottom: -25vmax;
+  right: -15vmax;
+  background: radial-gradient(circle, var(--orb-b) 0%, transparent 65%);
+  animation: lg-drift-b 28s ease-in-out infinite alternate;
 }
 
 /* Bouton Sélecteur de Thème Flottant */
@@ -88,12 +130,31 @@
   display: grid;
   place-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s var(--ease-spring);
+  animation: lg-pop 0.7s var(--ease-spring) 1s backwards;
+}
+
+.theme-toggle-btn svg {
+  transition: transform 0.6s var(--ease-spring);
 }
 
 .theme-toggle-btn:hover {
-  transform: rotate(15deg) scale(1.05);
+  transform: rotate(15deg) scale(1.08);
   border-color: var(--color-accent);
+}
+
+.theme-toggle-btn:hover svg {
+  transform: rotate(180deg);
+}
+
+.theme-toggle-btn:active {
+  transform: scale(0.9);
+  transition-duration: 0.1s;
+}
+
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 /* ==========================================================================
@@ -108,11 +169,11 @@
   border: 1px solid var(--color-card-border);
   border-radius: 24px;
   padding: 2.5rem;
-  box-shadow: 0 20px 40px var(--color-card-shadow), 
+  box-shadow: 0 20px 40px var(--color-card-shadow),
               inset 0 1px 0px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  animation: cardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cardIn 0.8s var(--ease-out);
   transition: background-color 0.4s, border-color 0.4s, box-shadow 0.4s;
 }
 
@@ -123,12 +184,26 @@
 }
 
 .login-logo-container {
+  position: relative;
   display: inline-block;
   padding: 4px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   margin-bottom: 1rem;
+  animation: lg-pop 0.9s var(--ease-spring) 0.2s backwards;
+}
+
+/* Onde qui s'échappe du logo, comme un signal radar */
+.login-logo-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  opacity: 0;
+  animation: lg-halo 3.6s cubic-bezier(0.24, 0, 0.38, 1) 1.2s infinite;
+  pointer-events: none;
 }
 
 .login-badge {
@@ -139,6 +214,7 @@
   background-position: center;
   background-repeat: no-repeat;
   border-radius: 50%;
+  animation: lg-float 6s ease-in-out 1s infinite;
 }
 
 .login-title {
@@ -147,6 +223,7 @@
   letter-spacing: -0.02em;
   color: var(--color-text-main);
   margin: 0;
+  animation: lg-rise 0.8s var(--ease-out) 0.35s backwards;
 }
 
 .login-subtitle {
@@ -156,6 +233,7 @@
   color: var(--color-text-muted);
   margin-top: 6px;
   padding: 0 10px;
+  animation: lg-rise 0.8s var(--ease-out) 0.45s backwards;
 }
 
 /* ==========================================================================
@@ -166,6 +244,7 @@
   padding: 4px;
   border-radius: 12px;
   margin-bottom: 1.75rem;
+  animation: lg-rise 0.8s var(--ease-out) 0.55s backwards;
 }
 [data-theme="dark"] .role-tabs-container {
   background: rgba(255, 255, 255, 0.04);
@@ -190,18 +269,32 @@
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s var(--ease-out);
   white-space: nowrap;
+}
+
+.role-tab svg {
+  transition: transform 0.4s var(--ease-spring);
 }
 
 .role-tab:hover {
   color: var(--color-text-main);
 }
 
+.role-tab:hover svg {
+  transform: scale(1.15);
+}
+
+.role-tab:active {
+  transform: scale(0.96);
+  transition-duration: 0.1s;
+}
+
 .role-tab--active {
   background: #ffffff;
   color: #1e3a8a !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  animation: lg-tab-pop 0.45s var(--ease-spring);
 }
 [data-theme="dark"] .role-tab--active {
   background: #334155;
@@ -226,7 +319,16 @@
 .login-field {
   display: flex;
   flex-direction: column;
+  animation: lg-rise 0.7s var(--ease-out) backwards;
+  animation-delay: 0.65s;
 }
+
+/* Cascade des champs (plafonnée à 6) */
+.login-form > .login-field:nth-child(2) { animation-delay: 0.72s; }
+.login-form > .login-field:nth-child(3) { animation-delay: 0.79s; }
+.login-form > .login-field:nth-child(4) { animation-delay: 0.86s; }
+.login-form > .login-field:nth-child(5) { animation-delay: 0.93s; }
+.login-form > .login-field:nth-child(n + 6) { animation-delay: 1s; }
 
 .login-label {
   display: flex;
@@ -236,10 +338,16 @@
   font-weight: 600;
   color: var(--color-text-main);
   margin-bottom: 6px;
+  transition: color 0.25s ease;
+}
+
+.login-field:focus-within .login-label {
+  color: var(--color-accent);
 }
 
 .login-label--accent { color: var(--color-accent); }
 .login-label--admin { color: var(--color-admin); }
+.login-field:focus-within .login-label--admin { color: var(--color-admin); }
 
 .login-input-wrap {
   position: relative;
@@ -252,7 +360,7 @@
   left: 14px;
   color: var(--color-text-muted);
   pointer-events: none;
-  transition: color 0.2s;
+  transition: color 0.25s, transform 0.4s var(--ease-spring);
 }
 
 .login-input {
@@ -263,12 +371,18 @@
   border-radius: 12px;
   color: var(--color-text-main);
   font-size: 14px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s var(--ease-out);
 }
 
 .login-input::placeholder {
   color: var(--color-text-muted);
   opacity: 0.7;
+  transition: opacity 0.25s ease, transform 0.3s var(--ease-out);
+}
+
+.login-input:focus::placeholder {
+  opacity: 0.3;
+  transform: translateX(4px);
 }
 
 .login-input:focus {
@@ -280,6 +394,7 @@
 
 .login-input:focus + .login-input-icon {
   color: var(--color-accent);
+  transform: scale(1.15);
 }
 
 .login-input--password {
@@ -308,12 +423,17 @@
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: all 0.2s;
+  transition: all 0.25s var(--ease-out);
 }
 
 .login-eye:hover {
   color: var(--color-text-main);
   background: rgba(0, 0, 0, 0.05);
+}
+
+.login-eye:active {
+  transform: scale(0.85);
+  transition-duration: 0.1s;
 }
 
 .login-hint {
@@ -339,13 +459,18 @@
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
-  animation: shake 0.4s ease-in-out;
+  animation:
+    lg-error-in 0.45s var(--ease-spring),
+    shake 0.5s ease-in-out 0.1s;
 }
 
 /* ==========================================================================
    BOUTONS ET INTERACTIONS
    ========================================================================== */
 .login-submit {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   width: 100%;
   padding: 13px;
   background: var(--color-primary);
@@ -357,22 +482,48 @@
   cursor: pointer;
   margin-top: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s var(--ease-out);
+  animation: lg-rise 0.7s var(--ease-out) 1.05s backwards;
+}
+
+/* Reflet qui balaie le bouton au survol */
+.login-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-130%);
 }
 
 .login-submit:hover:not(:disabled) {
   opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.login-submit:hover:not(:disabled)::after {
+  transform: translateX(130%);
+  transition: transform 0.8s var(--ease-out);
 }
 
 .login-submit:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.985);
+  transition-duration: 0.1s;
 }
 
+.login-submit:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Désactivé = en cours de connexion : un reflet défile en continu */
 .login-submit:disabled {
-  opacity: 0.6;
+  opacity: 0.75;
   cursor: not-allowed;
+  background-image: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: lg-shimmer 1.4s linear infinite;
 }
 
 /* Footer Toggle account */
@@ -381,6 +532,7 @@
   margin-top: 1.75rem;
   border-top: 1px solid var(--color-input-border);
   padding-top: 1.25rem;
+  animation: lg-rise 0.7s var(--ease-out) 1.15s backwards;
 }
 
 .login-toggle {
@@ -396,7 +548,7 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 8px;
-  transition: all 0.2s;
+  transition: all 0.25s var(--ease-out);
 }
 
 .login-toggle:hover {
@@ -407,9 +559,33 @@
   background: rgba(255,255,255,0.03);
 }
 
+.login-toggle:active {
+  transform: scale(0.96);
+}
+
 .login-toggle span {
+  position: relative;
   color: var(--color-accent);
   font-weight: 700;
+}
+
+/* Soulignement qui se dessine sous l'action */
+.login-toggle span::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1.5px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.login-toggle:hover span::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 /* ==========================================================================
@@ -418,25 +594,91 @@
 @keyframes cardIn {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.98);
+    transform: translateY(32px) scale(0.97);
+    filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+  15% { transform: translateX(-6px); }
+  35% { transform: translateX(5px); }
+  55% { transform: translateX(-4px); }
+  75% { transform: translateX(3px); }
 }
 
+@keyframes lg-error-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes lg-rise {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px); }
+  to   { opacity: 1; transform: none;             filter: blur(0); }
+}
+
+@keyframes lg-pop {
+  from { opacity: 0; transform: scale(0.5) rotate(-12deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes lg-tab-pop {
+  0%   { transform: scale(0.92); }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes lg-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+@keyframes lg-halo {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%,
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes lg-shimmer {
+  from { background-position: 150% 0; }
+  to   { background-position: -100% 0; }
+}
+
+@keyframes lg-drift-a {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(14vmax, 10vmax) scale(1.15); }
+}
+
+@keyframes lg-drift-b {
+  from { transform: translate(0, 0) scale(1.1); }
+  to   { transform: translate(-12vmax, -8vmax) scale(0.95); }
+}
+
+/* Doit rester après .login-field : le contenu qui change d'onglet reprend la main */
 .animate-fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: fadeIn 0.4s var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) forwards;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   ACCESSIBILITÉ : on coupe tout si l'utilisateur le demande
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .login-root *,
+  .login-root *::before,
+  .login-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -1,4 +1,10 @@
-/* AirportMarker.css */
+/* AirportMarker.css
+   Moment mémorable : le marqueur sélectionné émet des ondes de radar.
+   Règle d'or : on n'anime JAMAIS `transform` sur .airport-marker-icon ni sur
+   .leaflet-tooltip (Leaflet s'en sert pour les positionner). On anime
+   seulement l'élément intérieur .airport-marker, et pour le tooltip on
+   utilise les propriétés individuelles `translate` / `scale`, qui se
+   combinent avec le transform de Leaflet au lieu de le remplacer. */
 
 /* Le divIcon lui-même ne doit avoir aucun style Leaflet par défaut */
 .airport-marker-icon {
@@ -7,15 +13,22 @@
 }
 
 .airport-marker {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --marker-glow: color-mix(in srgb, var(--color-primary, #6366f1) 40%, transparent);
+
+  position: relative;
   display: block;
   width: 22px;
   height: 22px;
   background: var(--color-primary, #6366f1);
   border: 3px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px var(--marker-glow);
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition:
+    transform 0.4s var(--ease-spring),
+    box-shadow 0.3s var(--ease-out);
 }
 
 .airport-marker:hover,
@@ -23,7 +36,60 @@
   transform: scale(1.2);
 }
 
-/* Étiquette de nom (Leaflet Tooltip natif, permanent au survol) */
+.airport-marker:hover {
+  box-shadow:
+    0 6px 16px var(--marker-glow),
+    0 0 0 6px color-mix(in srgb, var(--color-primary, #6366f1) 18%, transparent);
+}
+
+.airport-marker:active {
+  transform: scale(0.95);
+  transition-duration: 0.1s;
+}
+
+/* --------------------------------------------------------------------------
+   Sélectionné : petit rebond d'arrivée + deux ondes décalées (radar)
+   -------------------------------------------------------------------------- */
+.airport-marker.selected {
+  box-shadow:
+    0 6px 18px var(--marker-glow),
+    0 0 0 5px color-mix(in srgb, var(--color-primary, #6366f1) 22%, transparent);
+  animation: marker-pop 0.5s var(--ease-spring);
+}
+
+.airport-marker.selected::before,
+.airport-marker.selected::after {
+  content: '';
+  position: absolute;
+  inset: -3px; /* recouvre exactement la bordure blanche */
+  border-radius: 50%;
+  border: 2px solid var(--color-primary, #6366f1);
+  opacity: 0;
+  pointer-events: none;
+  animation: marker-ping 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+.airport-marker.selected::after {
+  animation-delay: 1.2s; /* seconde onde, décalée */
+}
+
+@keyframes marker-pop {
+  0%   { transform: scale(0.8); }
+  60%  { transform: scale(1.45); }
+  100% { transform: scale(1.2); }
+}
+
+@keyframes marker-ping {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  80%,
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Étiquette de nom (Leaflet Tooltip natif, permanent au survol)
+   Leaflet retire le tooltip du DOM quand on quitte le marqueur : l'entrée
+   rejoue donc à chaque survol.
+   -------------------------------------------------------------------------- */
 .marker-tooltip {
   background: var(--color-card, #fff) !important;
   color: var(--color-text, #0f172a) !important;
@@ -33,8 +99,36 @@
   font-size: 12px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transform-origin: 50% 100%;
+  animation: marker-tip-in 0.3s var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
 
 .marker-tooltip::before {
   border-top-color: var(--color-border, #e2e8f0) !important;
+}
+
+@keyframes marker-tip-in {
+  from { translate: 0 6px; scale: 0.9; }
+  to   { translate: 0 0;   scale: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Accessibilité : on coupe tout si l'utilisateur le demande
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .airport-marker,
+  .airport-marker::before,
+  .airport-marker::after,
+  .marker-tooltip {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Plus d'onde en boucle : on garde juste l'état "sélectionné" visible */
+  .airport-marker.selected::before,
+  .airport-marker.selected::after {
+    display: none;
+  }
 }
