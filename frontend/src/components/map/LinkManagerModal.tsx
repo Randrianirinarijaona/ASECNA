@@ -11,6 +11,7 @@ import {
 } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink, LinkDirection } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
+import { ConfirmModal } from '../ui/Modal';
 // @ts-ignore
 import './NetworkModal.css';
 
@@ -51,13 +52,15 @@ export default function LinkManagerModal({
   const airportEntries = Object.entries(airports).filter(([key]) => key !== ANTANANARIVO_AIRPORT_KEY);
 
   const [toKey, setToKey] = useState('');
-  // CORRIGÉ : valeur par défaut alignée sur le backend ('outgoing' au lieu
-  // de 'sortant').
   const [direction, setDirection] = useState<LinkDirection>('outgoing');
   const [linkType, setLinkType] = useState('');
   const [circuit, setCircuit] = useState('');
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState('');
+
+  // NOUVEAU : liaison en attente de confirmation de suppression
+  // (`label` = intitulé lisible, ex. "TNR → DIE").
+  const [linkToDelete, setLinkToDelete] = useState<{ id: string; label: string } | null>(null);
 
   const matchingLinks = links.filter(
     (l) => l.category === category && l.itemTitle.toLowerCase().includes(subItem.toLowerCase())
@@ -126,8 +129,6 @@ export default function LinkManagerModal({
                 </select>
 
                 <label>Direction</label>
-                {/* CORRIGÉ : les valeurs des <option> correspondent
-                    désormais exactement à l'enum backend. */}
                 <select
                   className="form-input"
                   value={direction}
@@ -191,6 +192,7 @@ export default function LinkManagerModal({
                 {matchingLinks.map((link) => {
                   const from = airports[link.fromAirportKey];
                   const to = airports[link.toAirportKey];
+                  const linkLabel = `${(from?.iata || from?.name) ?? '—'} ${LINK_DIRECTION_GLYPH[link.direction]} ${(to?.iata || to?.name) ?? '—'}`;
                   return (
                     <div key={link.id} className="network-item-card">
                       <div className="network-item-card-top">
@@ -215,14 +217,13 @@ export default function LinkManagerModal({
                           }}
                           title={LINK_STATUS_LABELS[link.status]}
                         />
-                        <span className="network-item-title">
-                          {(from?.iata || from?.name) ?? '—'} {LINK_DIRECTION_GLYPH[link.direction]}{' '}
-                          {(to?.iata || to?.name) ?? '—'}
-                        </span>
+                        <span className="network-item-title">{linkLabel}</span>
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
                           title="Supprimer cette liaison"
-                          onClick={() => onDeleteLink(link.id)}
+                          // MODIFIÉ : demande de confirmation au lieu d'une
+                          // suppression immédiate.
+                          onClick={() => setLinkToDelete({ id: link.id, label: linkLabel })}
                         >
                           <Unlink size={13} />
                         </button>
@@ -234,6 +235,20 @@ export default function LinkManagerModal({
             </>
           )}
         </div>
+
+        {/* NOUVEAU : confirmation avant suppression d'une liaison */}
+        <ConfirmModal
+          isOpen={Boolean(linkToDelete)}
+          onClose={() => setLinkToDelete(null)}
+          onConfirm={() => {
+            if (linkToDelete) onDeleteLink(linkToDelete.id);
+            setLinkToDelete(null);
+          }}
+          title="Supprimer la liaison"
+          message={`Voulez-vous vraiment supprimer la liaison « ${subItem} » ${linkToDelete?.label ?? ''} ? Ses paramètres seront également supprimés. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
       </div>
     </div>
   );

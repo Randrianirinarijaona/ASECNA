@@ -103,8 +103,6 @@ export function useAirportsData() {
     [handleError]
   );
 
-  // NOUVEAU : modification du nom / code IATA d'un aéroport existant
-  // (NetworkModal.tsx, admin uniquement).
   const updateAirport = useCallback(
     async (key: string, updates: { name?: string; iata?: string }) => {
       try {
@@ -386,6 +384,38 @@ export function useAirportsData() {
     [handleError, showToast]
   );
 
+  // NOUVEAU : modification de la direction, du type, du circuit, de l'@IP
+  // et du port d'une liaison existante (admin uniquement côté API).
+  const updateNetworkLink = useCallback(
+    async (
+      linkId: string,
+      updates: {
+        direction?: LinkDirection;
+        linkType?: string;
+        circuit?: string;
+        ipAddress?: string;
+        port?: string;
+      }
+    ) => {
+      if (updates.ipAddress !== undefined && !updates.ipAddress.trim()) {
+        showToast("L'adresse IP est obligatoire.", 'error');
+        return;
+      }
+      if (updates.port !== undefined && !updates.port.trim()) {
+        showToast('Le port est obligatoire.', 'error');
+        return;
+      }
+      try {
+        const updated = await linkService.update(linkId, updates);
+        setLinks((prev) => prev.map((l) => (l.id === linkId ? updated : l)));
+        showToast('Liaison mise à jour', 'success');
+      } catch (err) {
+        handleError(err, 'Impossible de modifier la liaison');
+      }
+    },
+    [handleError, showToast]
+  );
+
   const deleteNetworkLink = useCallback(
     async (linkId: string) => {
       try {
@@ -437,6 +467,27 @@ export function useAirportsData() {
     [handleError]
   );
 
+  const updateLinkParameter = useCallback(
+    async (linkId: string, paramId: string, name: string) => {
+      if (!name.trim()) return;
+      try {
+        const updated = await linkService.updateParameter(paramId, name.trim());
+        setLinks((prev) =>
+          prev.map((l) => {
+            if (l.id !== linkId) return l;
+            return {
+              ...l,
+              parameters: (l.parameters || []).map((p) => (p.id === paramId ? { ...p, name: updated.name } : p)),
+            };
+          })
+        );
+      } catch (err) {
+        handleError(err, 'Impossible de modifier le paramètre');
+      }
+    },
+    [handleError]
+  );
+
   const deleteLinkParameter = useCallback(
     async (linkId: string, paramId: string) => {
       try {
@@ -471,6 +522,31 @@ export function useAirportsData() {
         );
       } catch (err) {
         handleError(err, "Impossible d'ajouter la valeur");
+      }
+    },
+    [handleError]
+  );
+
+  const updateLinkParameterValue = useCallback(
+    async (linkId: string, paramId: string, valueId: string, name: string, text: string) => {
+      if (!name.trim() || !text.trim()) return;
+      try {
+        const updated = await linkService.updateParameterValue(valueId, name.trim(), text.trim());
+        setLinks((prev) =>
+          prev.map((l) => {
+            if (l.id !== linkId) return l;
+            return {
+              ...l,
+              parameters: (l.parameters || []).map((p) =>
+                p.id === paramId
+                  ? { ...p, values: p.values.map((v) => (v.id === valueId ? updated : v)) }
+                  : p
+              ),
+            };
+          })
+        );
+      } catch (err) {
+        handleError(err, 'Impossible de modifier la valeur');
       }
     },
     [handleError]
@@ -775,12 +851,15 @@ export function useAirportsData() {
     updateNetworkItemStatus,
     updateNetworkItemDescription,
     addNetworkLink,
+    updateNetworkLink,
     deleteNetworkLink,
     updateLinkStatus,
     getLinksForAirport,
     addLinkParameter,
+    updateLinkParameter,
     deleteLinkParameter,
     addLinkParameterValue,
+    updateLinkParameterValue,
     deleteLinkParameterValue,
     addItemSubParameter,
     deleteItemSubParameter,

@@ -79,6 +79,9 @@ interface ConfirmModalProps {
   title: string;
   message: string;
   confirmLabel?: string;
+  // NOUVEAU : libellé du bouton d'annulation (par défaut 'Cancel', donc
+  // aucun changement pour les appelants existants comme Settings.tsx).
+  cancelLabel?: string;
   isLoading?: boolean;
 }
 
@@ -89,6 +92,7 @@ export function ConfirmModal({
   title,
   message,
   confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   isLoading = false,
 }: ConfirmModalProps) {
   return (
@@ -101,7 +105,7 @@ export function ConfirmModal({
       footer={
         <div className="modal-footer-actions">
           <button className="btn btn-secondary" onClick={onClose} disabled={isLoading}>
-            Cancel
+            {cancelLabel}
           </button>
           <button className="btn btn-danger" onClick={onConfirm} disabled={isLoading}>
             {isLoading ? 'Processing…' : confirmLabel}

@@ -4,6 +4,7 @@ import type { Airport } from '../../types';
 import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor } from '../../data/networkCategories';
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
+import { ConfirmModal } from '../ui/Modal';
 
 import NetworkItemModal from './NetworkItemModal';
 // @ts-ignore: CSS side-effect import handled by build tooling
@@ -22,7 +23,6 @@ interface NetworkModalProps {
   links: NetworkLink[];
   onClose: () => void;
   onDeleteAirport: (key: string) => void;
-  // NOUVEAU : modification du nom / code IATA de l'aéroport, admin uniquement.
   onUpdateAirport?: (key: string, updates: { name?: string; iata?: string }) => void;
   onAddItem: (category: NetworkCategoryKey, item: NetworkItemInput) => void;
   onDeleteItem: (category: NetworkCategoryKey, title: string) => void;
@@ -87,10 +87,19 @@ export default function NetworkModal({
   const [addingTo, setAddingTo] = useState<NetworkCategoryKey | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
-  // NOUVEAU : édition du nom / code IATA de l'aéroport (admin uniquement).
+  // Édition du nom / code IATA de l'aéroport (admin uniquement).
   const [editingAirport, setEditingAirport] = useState(false);
   const [editName, setEditName] = useState(airport.name);
   const [editIata, setEditIata] = useState(airport.iata);
+
+  // Paramètre en attente de confirmation de suppression.
+  const [itemToDelete, setItemToDelete] = useState<{
+    category: NetworkCategoryKey;
+    title: string;
+  } | null>(null);
+
+  // NOUVEAU : confirmation avant suppression de l'aéroport lui-même.
+  const [confirmDeleteAirport, setConfirmDeleteAirport] = useState(false);
 
   const [selectedItemKey, setSelectedItemKey] = useState<{
     category: NetworkCategoryKey;
@@ -115,8 +124,6 @@ export default function NetworkModal({
     setAddingTo(null);
   };
 
-  // NOUVEAU : ouvre/ferme le mode édition, en réinitialisant les champs
-  // sur les valeurs actuelles à chaque ouverture.
   const startEditingAirport = () => {
     setEditName(airport.name);
     setEditIata(airport.iata);
@@ -138,7 +145,6 @@ export default function NetworkModal({
         <div className="network-modal-header">
           <div style={{ flex: 1 }}>
             {editingAirport ? (
-              // NOUVEAU : formulaire d'édition inline (nom + code IATA).
               <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
                 <input
                   className="form-input"
@@ -173,7 +179,6 @@ export default function NetworkModal({
             )}
           </div>
           <div className="network-modal-header-actions">
-            {/* NOUVEAU : bouton "Modifier" (nom / IATA), admin uniquement */}
             {isAdmin && onUpdateAirport && !editingAirport && (
               <button
                 className="icon-btn"
@@ -187,7 +192,9 @@ export default function NetworkModal({
               <button
                 className="icon-btn icon-btn--danger"
                 title="Supprimer cet aéroport"
-                onClick={() => onDeleteAirport(airportKey)}
+                // MODIFIÉ : ouvre la confirmation au lieu de supprimer
+                // immédiatement.
+                onClick={() => setConfirmDeleteAirport(true)}
               >
                 <Trash2 size={16} />
               </button>
@@ -252,7 +259,7 @@ export default function NetworkModal({
                             title="Supprimer"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteItem(category, item.title);
+                              setItemToDelete({ category, title: item.title });
                             }}
                           >
                             <Trash2 size={13} />
@@ -324,6 +331,34 @@ export default function NetworkModal({
             onOpenLinkDetail={onOpenLinkDetail}
           />
         )}
+
+        {/* Confirmation avant suppression d'un paramètre */}
+        <ConfirmModal
+          isOpen={Boolean(itemToDelete)}
+          onClose={() => setItemToDelete(null)}
+          onConfirm={() => {
+            if (itemToDelete) onDeleteItem(itemToDelete.category, itemToDelete.title);
+            setItemToDelete(null);
+          }}
+          title="Supprimer le paramètre"
+          message={`Voulez-vous vraiment supprimer le paramètre « ${itemToDelete?.title ?? ''} » ? Ses sous-paramètres et les liaisons associées seront également supprimés. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
+
+        {/* NOUVEAU : confirmation avant suppression de l'aéroport */}
+        <ConfirmModal
+          isOpen={confirmDeleteAirport}
+          onClose={() => setConfirmDeleteAirport(false)}
+          onConfirm={() => {
+            setConfirmDeleteAirport(false);
+            onDeleteAirport(airportKey);
+          }}
+          title="Supprimer l'aéroport"
+          message={`Voulez-vous vraiment supprimer l'aéroport « ${airport.name} » ? Tous ses paramètres, ses liaisons, ses informations locales et ses points techniques locaux seront également supprimés. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
       </div>
     </div>
   );

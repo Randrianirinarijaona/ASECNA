@@ -5,13 +5,17 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.config import settings
 from app.models.link import (
     NetworkLink,
-    LinkDirectionEnum,
     LinkParameter,
     LinkParameterValue,
     AirportLocalParameter,
     AirportLocalParameterValue,
 )
 from app.models.network import NetworkCategoryEnum
+
+# NOUVEAU : seuls ces champs d'une liaison peuvent être modifiés après
+# création (le sous-réseau et les aéroports définissent l'identité de la
+# liaison et restent figés).
+EDITABLE_LINK_FIELDS = {"direction", "link_type", "circuit", "ip_address", "port"}
 
 
 def _links_query():
@@ -34,28 +38,20 @@ def create_link(
     item_title: str,
     from_key: str,
     to_key: str,
-    direction: LinkDirectionEnum = LinkDirectionEnum.outgoing,
-    link_type: str | None = None,
-    circuit: str | None = None,
-    ip_address: str = "",
-    port: str = "",
+    direction: str,
+    link_type: str | None,
+    circuit: str | None,
+    ip_address: str,
+    port: str,
 ) -> NetworkLink:
-    """
-    Reproduit useAirportsData.addNetworkLink (refuse une liaison vers
-    soi-même, refuse un doublon quel que soit le sens) et ajoute :
-    - la contrainte "point de départ = Antananarivo" (règle métier
-      demandée), vérifiée ici pour que le backend reste la source de
-      vérité même si un client contournait la restriction d'UI ;
-    - les nouveaux champs direction/type/circuit/ip/port.
-    """
+    if from_key == to_key:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Impossible de relier un aéroport à lui-même")
+
     if from_key != settings.ANTANANARIVO_AIRPORT_KEY:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=f"Toute liaison doit obligatoirement partir d'Antananarivo ({settings.ANTANANARIVO_AIRPORT_KEY}).",
+            detail="Le point de départ d'une liaison doit être Antananarivo",
         )
-
-    if from_key == to_key:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Impossible de relier un aéroport à lui-même")
 
     existing = db.scalar(
         select(NetworkLink).where(
@@ -87,9 +83,20 @@ def create_link(
     return link
 
 
-def update_status(db: Session, link: NetworkLink, new_status: str) -> NetworkLink:
-    """NOUVEAU : modification de l'état d'une liaison (LinkDetailModal.tsx, admin)."""
-    link.status = new_status
+def update_link(db: Session, link: NetworkLink, updates: dict) -> NetworkLink:
+    """NOUVEAU : applique les modifications (direction, type, circuit,
+    @IP, port) sur une liaison existante. Les clés non autorisées sont
+    ignorées (défense en profondeur, le router filtre déjà)."""
+    for key, value in updates.items():
+        if key in EDITABLE_LINK_FIELDS:
+            setattr(link, key, value)
+    db.commit()
+    db.refresh(link)
+    return link
+
+
+def update_status(db: Session, link: NetworkLink, status_value: str) -> NetworkLink:
+    link.status = status_value
     db.commit()
     db.refresh(link)
     return link
@@ -113,7 +120,7 @@ def delete_links_for_item(db: Session, category: NetworkCategoryEnum, item_title
     db.commit()
 
 
-# ─── Paramètres de liaison (inchangé) ────────────────────────────────────
+# ─── Paramètres de liaison ────────────────────────────────────────────────
 
 def add_link_parameter(db: Session, link: NetworkLink, name: str) -> LinkParameter:
     param = LinkParameter(link_id=link.id, name=name)
@@ -125,6 +132,13 @@ def add_link_parameter(db: Session, link: NetworkLink, name: str) -> LinkParamet
 
 def get_link_parameter(db: Session, param_id: str) -> LinkParameter | None:
     return db.get(LinkParameter, param_id)
+
+
+def update_link_parameter(db: Session, param: LinkParameter, name: str) -> LinkParameter:
+    param.name = name
+    db.commit()
+    db.refresh(param)
+    return param
 
 
 def delete_link_parameter(db: Session, param: LinkParameter) -> None:
@@ -144,12 +158,24 @@ def get_link_parameter_value(db: Session, value_id: str) -> LinkParameterValue |
     return db.get(LinkParameterValue, value_id)
 
 
+def update_link_parameter_value(
+    db: Session, value: LinkParameterValue, name: str | None, text: str | None
+) -> LinkParameterValue:
+    if name is not None:
+        value.name = name
+    if text is not None:
+        value.text = text
+    db.commit()
+    db.refresh(value)
+    return value
+
+
 def delete_link_parameter_value(db: Session, value: LinkParameterValue) -> None:
     db.delete(value)
     db.commit()
 
 
-# ─── Paramètres locaux d'un aéroport (inchangé) ──────────────────────────
+# ─── Paramètres locaux d'un aéroport (module "Réseau local") ────────────
 
 def add_local_parameter(db: Session, airport_key: str, name: str) -> AirportLocalParameter:
     param = AirportLocalParameter(airport_key=airport_key, name=name)
@@ -168,7 +194,9 @@ def delete_local_parameter(db: Session, param: AirportLocalParameter) -> None:
     db.commit()
 
 
-def add_local_parameter_value(db: Session, param: AirportLocalParameter, name: str, text: str) -> AirportLocalParameterValue:
+def add_local_parameter_value(
+    db: Session, param: AirportLocalParameter, name: str, text: str
+) -> AirportLocalParameterValue:
     value = AirportLocalParameterValue(parameter_id=param.id, name=name, text=text)
     db.add(value)
     db.commit()

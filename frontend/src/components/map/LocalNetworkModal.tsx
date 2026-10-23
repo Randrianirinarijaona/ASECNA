@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { X, Trash2, Plus } from 'lucide-react';
 import type { Airport, Parameter } from '../../types';
+import { ConfirmModal } from '../ui/Modal';
 // @ts-ignore
 import './NetworkItemModal.css';
 
@@ -20,9 +21,7 @@ interface LocalNetworkModalProps {
   onDeleteParameter: (paramId: string) => void;
   onAddValue: (paramId: string, name: string, text: string) => void;
   onDeleteValue: (paramId: string, valueId: string) => void;
-  // NOUVEAU : suppression de l'entité elle-même (point technique local).
-  // Optionnel — si absent, aucun bouton de suppression n'est affiché
-  // (comportement inchangé pour tout appelant qui ne le fournit pas).
+  // Suppression de l'entité elle-même (point technique local), inchangée.
   onDelete?: () => void;
 }
 
@@ -44,6 +43,14 @@ export default function LocalNetworkModal({
   const [addingValueFor, setAddingValueFor] = useState<string | null>(null);
   const [newValueName, setNewValueName] = useState('');
   const [newValueText, setNewValueText] = useState('');
+
+  // NOUVEAU : éléments en attente de confirmation de suppression.
+  const [paramToDelete, setParamToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [valueToDelete, setValueToDelete] = useState<{
+    paramId: string;
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleAddParameter = () => {
     if (!newParamName.trim()) return;
@@ -71,9 +78,6 @@ export default function LocalNetworkModal({
             <p className="network-modal-subtitle">Informations locales</p>
           </div>
           <div className="network-modal-header-actions">
-            {/* NOUVEAU : bouton de suppression du point technique local,
-                réutilise exactement le style/emplacement du bouton
-                "Supprimer cet aéroport" de NetworkModal.tsx. */}
             {isAdmin && onDelete && (
               <button
                 className="icon-btn icon-btn--danger"
@@ -89,7 +93,7 @@ export default function LocalNetworkModal({
           </div>
         </div>
 
-        <div className="network-modal-body network-modal-body--scroll">
+        <div className="network-modal-body">
           <div className="network-modal-category">
             <div className="network-modal-category-header">
               <h3>Paramètres locaux</h3>
@@ -116,7 +120,9 @@ export default function LocalNetworkModal({
                     <button
                       className="icon-btn icon-btn--danger icon-btn--sm"
                       title="Supprimer ce paramètre"
-                      onClick={() => onDeleteParameter(param.id)}
+                      // MODIFIÉ : demande de confirmation au lieu d'une
+                      // suppression immédiate.
+                      onClick={() => setParamToDelete({ id: param.id, name: param.name })}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -138,7 +144,10 @@ export default function LocalNetworkModal({
                           <button
                             className="icon-btn icon-btn--danger icon-btn--sm"
                             title="Supprimer cette valeur"
-                            onClick={() => onDeleteValue(param.id, value.id)}
+                            // MODIFIÉ : demande de confirmation.
+                            onClick={() =>
+                              setValueToDelete({ paramId: param.id, id: value.id, name: value.name })
+                            }
                           >
                             <Trash2 size={13} />
                           </button>
@@ -206,6 +215,34 @@ export default function LocalNetworkModal({
             )}
           </div>
         </div>
+
+        {/* NOUVEAU : confirmation avant suppression d'un paramètre local */}
+        <ConfirmModal
+          isOpen={Boolean(paramToDelete)}
+          onClose={() => setParamToDelete(null)}
+          onConfirm={() => {
+            if (paramToDelete) onDeleteParameter(paramToDelete.id);
+            setParamToDelete(null);
+          }}
+          title="Supprimer le paramètre"
+          message={`Voulez-vous vraiment supprimer le paramètre « ${paramToDelete?.name ?? ''} » et toutes ses valeurs ? Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
+
+        {/* NOUVEAU : confirmation avant suppression d'une valeur locale */}
+        <ConfirmModal
+          isOpen={Boolean(valueToDelete)}
+          onClose={() => setValueToDelete(null)}
+          onConfirm={() => {
+            if (valueToDelete) onDeleteValue(valueToDelete.paramId, valueToDelete.id);
+            setValueToDelete(null);
+          }}
+          title="Supprimer la valeur"
+          message={`Voulez-vous vraiment supprimer la valeur « ${valueToDelete?.name ?? ''} » ? Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
       </div>
     </div>
   );

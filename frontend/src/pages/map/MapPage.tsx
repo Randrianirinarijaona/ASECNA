@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, createElement } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 // @ts-ignore
 import 'leaflet/dist/leaflet.css';
@@ -76,7 +76,7 @@ function LocalPointClickCatcher({
   onPick: (coords: [number, number]) => void;
 }) {
   useMapEvents({
-    click(e: { latlng: { lat: number; lng: number } }) {
+    click(e) {
       if (!active) return;
       onPick([e.latlng.lat, e.latlng.lng]);
     },
@@ -153,12 +153,7 @@ function OffscreenAirportIndicators({ targets }: { targets: OffscreenTarget[] })
           iconSize: [0, 0],
         });
 
-        return createElement(Marker as any, {
-          key: target.id,
-          position: edgeLatLng,
-          icon,
-          interactive: false,
-        });
+        return <Marker key={target.id} position={edgeLatLng} icon={icon} interactive={false} />;
       })}
     </>
   );
@@ -186,11 +181,14 @@ export default function MapPage() {
     updateNetworkItemStatus,
     updateNetworkItemDescription,
     addNetworkLink,
+    updateNetworkLink,
     deleteNetworkLink,
     updateLinkStatus,
     addLinkParameter,
+    updateLinkParameter,
     deleteLinkParameter,
     addLinkParameterValue,
+    updateLinkParameterValue,
     deleteLinkParameterValue,
     addItemSubParameter,
     deleteItemSubParameter,
@@ -248,7 +246,6 @@ export default function MapPage() {
     fromAirportKey: string;
     toAirportKey: string;
   } | null>(null);
-  // CORRIGÉ : valeur par défaut alignée sur le backend ('outgoing').
   const [pendingLinkDirection, setPendingLinkDirection] = useState<LinkDirection>('outgoing');
   const [pendingLinkType, setPendingLinkType] = useState('');
   const [pendingLinkCircuit, setPendingLinkCircuit] = useState('');
@@ -547,7 +544,8 @@ export default function MapPage() {
             />
 
             {(activeModule === 'aeroport' ||
-              (activeModule === 'reseauLocal' && !zoomedLocalAirportKey)) &&
+              (activeModule === 'reseauLocal' && !zoomedLocalAirportKey) ||
+              Boolean(networkUsage)) &&
               Object.entries(airports)
                 .filter(([, a]) => !a.isTechnicalPoint)
                 .map(([key, airport]) => (
@@ -696,9 +694,12 @@ export default function MapPage() {
           toAirport={selectedLink.to}
           isAdmin={isAdmin}
           onClose={() => setSelectedLinkId(null)}
+          onUpdateLink={updateNetworkLink}
           onAddParameter={addLinkParameter}
+          onUpdateParameter={updateLinkParameter}
           onDeleteParameter={deleteLinkParameter}
           onAddValue={addLinkParameterValue}
+          onUpdateValue={updateLinkParameterValue}
           onDeleteValue={deleteLinkParameterValue}
           onUpdateStatus={updateLinkStatus}
         />
@@ -818,7 +819,6 @@ export default function MapPage() {
 
           <div className="form-group text-left">
             <label className="form-label">Direction</label>
-            {/* CORRIGÉ : valeurs alignées sur l'enum backend */}
             <select
               className="form-input"
               value={pendingLinkDirection}

@@ -1,6 +1,5 @@
 from typing import Optional
 
-from app.models.link import LinkDirectionEnum, LinkStatusEnum
 from app.schemas.base import CamelModel
 from app.schemas.network import NetworkItemOut
 
@@ -28,11 +27,18 @@ class ParameterCreate(CamelModel):
     name: str
 
 
+class ParameterUpdate(CamelModel):
+    name: Optional[str] = None
+
+
+class ParameterValueUpdate(CamelModel):
+    name: Optional[str] = None
+    text: Optional[str] = None
+
+
 # ─── Aéroport ────────────────────────────────────────────────────────────
 
 class AirportCreate(CamelModel):
-    """MODIFIÉ : `iata` est désormais optionnel (le formulaire
-    AddAirportModal.tsx n'exige plus ce champ)."""
     key: str
     name: str
     iata: Optional[str] = ""
@@ -41,8 +47,6 @@ class AirportCreate(CamelModel):
 
 
 class AirportUpdate(CamelModel):
-    """NOUVEAU : édition du nom / code IATA d'un aéroport existant, réservée
-    à l'administrateur (NetworkModal.tsx, bouton "Modifier")."""
     name: Optional[str] = None
     iata: Optional[str] = None
 
@@ -76,30 +80,26 @@ class AirportSummaryOut(CamelModel):
 # ─── Liaisons (NetworkLink) ──────────────────────────────────────────────
 
 class LinkCreate(CamelModel):
-    """
-    MODIFIÉ :
-    - `from_airport_key` doit être l'aéroport d'Antananarivo (vérifié dans
-      crud/link.py::create_link) ; le champ reste présent (plutôt que
-      supprimé) pour que le backend reste la source de vérité de cette
-      règle même si un client mal formé l'omettait ou la contournait.
-    - `bidirectional` (bool) est remplacé par `direction`.
-    - Nouveaux champs : `link_type`/`circuit` (facultatifs, valeur par
-      défaut None), `ip_address`/`port` (obligatoires, non optionnels).
-    """
     category: str
     item_title: str
     from_airport_key: str
     to_airport_key: str
-    direction: LinkDirectionEnum = LinkDirectionEnum.outgoing
+    direction: str = "outgoing"
     link_type: Optional[str] = None
     circuit: Optional[str] = None
     ip_address: str
     port: str
 
 
-class LinkStatusUpdate(CamelModel):
-    """Payload de PATCH /links/{id}/status (LinkDetailModal.tsx, admin uniquement)."""
-    status: LinkStatusEnum
+# NOUVEAU : modification des informations d'une liaison existante
+# (admin uniquement). Tous les champs sont optionnels : seuls ceux
+# réellement envoyés sont modifiés.
+class LinkUpdate(CamelModel):
+    direction: Optional[str] = None
+    link_type: Optional[str] = None
+    circuit: Optional[str] = None
+    ip_address: Optional[str] = None
+    port: Optional[str] = None
 
 
 class LinkOut(CamelModel):
@@ -108,10 +108,14 @@ class LinkOut(CamelModel):
     item_title: str
     from_airport_key: str
     to_airport_key: str
-    direction: LinkDirectionEnum
+    direction: str
     link_type: Optional[str] = None
     circuit: Optional[str] = None
-    ip_address: Optional[str] = None
-    port: Optional[str] = None
-    status: LinkStatusEnum
+    ip_address: str
+    port: str
+    status: str
     parameters: list[ParameterOut] = []
+
+
+class LinkStatusUpdate(CamelModel):
+    status: str

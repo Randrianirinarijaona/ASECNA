@@ -78,6 +78,8 @@
   margin: 0;
 }
 
+.modal-backdrop { z-index: 2000; }
+
 @keyframes backdrop-in {
   from { opacity: 0; }
   to { opacity: 1; }

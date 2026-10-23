@@ -32,8 +32,6 @@ export const airportService = {
       body: JSON.stringify(payload),
     }),
 
-  // NOUVEAU : modification du nom / code IATA d'un aéroport existant
-  // (NetworkModal.tsx, admin uniquement — PATCH /airports/{key}).
   update: (key: string, payload: { name?: string; iata?: string }): Promise<AirportApiResult> =>
     request<AirportApiResult>(`/airports/${encodeURIComponent(key)}`, {
       method: 'PATCH',
@@ -178,6 +176,24 @@ export const linkService = {
       }),
     }),
 
+  // NOUVEAU : modification des informations d'une liaison existante
+  // (admin uniquement — PATCH /links/{id}). Envoyer une chaîne vide pour
+  // `linkType` ou `circuit` les efface.
+  update: (
+    linkId: string,
+    payload: {
+      direction?: LinkDirection;
+      linkType?: string;
+      circuit?: string;
+      ipAddress?: string;
+      port?: string;
+    }
+  ): Promise<NetworkLink> =>
+    request<NetworkLink>(`/links/${linkId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   updateStatus: (linkId: string, status: string): Promise<NetworkLink> =>
     request<NetworkLink>(`/links/${linkId}/status`, {
       method: 'PATCH',
@@ -192,12 +208,24 @@ export const linkService = {
       body: JSON.stringify({ name }),
     }),
 
+  updateParameter: (paramId: string, name: string): Promise<Parameter> =>
+    request<Parameter>(`/links/parameters/${paramId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+
   deleteParameter: (paramId: string): Promise<{ message: string }> =>
     request(`/links/parameters/${paramId}`, { method: 'DELETE' }),
 
   addParameterValue: (paramId: string, name: string, text: string): Promise<ParameterValue> =>
     request<ParameterValue>(`/links/parameters/${paramId}/values`, {
       method: 'POST',
+      body: JSON.stringify({ name, text }),
+    }),
+
+  updateParameterValue: (valueId: string, name: string, text: string): Promise<ParameterValue> =>
+    request<ParameterValue>(`/links/parameters/values/${valueId}`, {
+      method: 'PATCH',
       body: JSON.stringify({ name, text }),
     }),
 

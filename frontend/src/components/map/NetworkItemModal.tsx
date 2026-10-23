@@ -13,6 +13,7 @@ import { NETWORK_CATEGORY_LABELS, getNetworkLinkColor, ANTANANARIVO_AIRPORT_KEY 
 import type { NetworkCategoryKey, NetworkLink } from '../../data/networkCategories';
 import type { AirportsMap } from '../../hooks/useAirportsData';
 import type { NetworkSubParameter } from '../../types';
+import { ConfirmModal } from '../ui/Modal';
 // @ts-ignore: CSS side-effect import handled by build tooling
 import './NetworkItemModal.css';
 
@@ -72,6 +73,13 @@ export default function NetworkItemModal({
   const [newSubValue, setNewSubValue] = useState('');
   const [showAddSub, setShowAddSub] = useState(false);
 
+  // Sous-paramètre en attente de confirmation de suppression.
+  const [subToDelete, setSubToDelete] = useState<NetworkSubParameter | null>(null);
+
+  // NOUVEAU : liaison en attente de confirmation de suppression
+  // (`name` = nom de l'aéroport situé à l'autre bout de la liaison).
+  const [linkToDelete, setLinkToDelete] = useState<{ id: string; name: string } | null>(null);
+
   const toggleGlobalStatus = () => {
     const newStatus = editStatus === 'operational' ? 'maintenance' : 'operational';
     setEditStatus(newStatus);
@@ -124,8 +132,7 @@ export default function NetworkItemModal({
 
   const linkColor = category ? getNetworkLinkColor(category, itemTitle) : undefined;
 
-  // NOUVEAU : une nouvelle liaison ne peut être démarrée que depuis
-  // Antananarivo (cf. contrainte "point de départ obligatoire").
+  // Une nouvelle liaison ne peut être démarrée que depuis Antananarivo.
   const canStartLinkFromHere = airportKey === ANTANANARIVO_AIRPORT_KEY;
 
   return (
@@ -166,7 +173,7 @@ export default function NetworkItemModal({
           </div>
         </div>
 
-        <div className="network-modal-body network-modal-body--scroll">
+        <div className="network-modal-body">
           <div className="network-item-detail">
             <div className="network-item-card-top">
               {!hideStatus && <span className={`status-dot status-dot--${editStatus}`} />}
@@ -221,7 +228,6 @@ export default function NetworkItemModal({
             <div className="network-modal-category">
               <div className="network-modal-category-header">
                 <h3>Aéroports liés</h3>
-                {/* MODIFIÉ : bouton visible uniquement depuis Antananarivo */}
                 {isAdmin && onStartLink && canStartLinkFromHere && (
                   <button
                     className="icon-btn icon-btn--sm"
@@ -267,7 +273,9 @@ export default function NetworkItemModal({
                           title="Supprimer cette liaison"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onDeleteLink(linked.linkId);
+                            // MODIFIÉ : demande de confirmation au lieu
+                            // d'une suppression immédiate.
+                            setLinkToDelete({ id: linked.linkId, name: linked.name });
                           }}
                         >
                           <Trash2 size={13} />
@@ -313,7 +321,8 @@ export default function NetworkItemModal({
                         )}
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
-                          onClick={() => onDeleteSubParameter?.(sub.id)}
+                          title="Supprimer ce sous-paramètre"
+                          onClick={() => setSubToDelete(sub)}
                         >
                           <Trash2 size={13} />
                         </button>
@@ -351,6 +360,34 @@ export default function NetworkItemModal({
             )}
           </div>
         </div>
+
+        {/* Confirmation avant suppression d'un sous-paramètre */}
+        <ConfirmModal
+          isOpen={Boolean(subToDelete)}
+          onClose={() => setSubToDelete(null)}
+          onConfirm={() => {
+            if (subToDelete) onDeleteSubParameter?.(subToDelete.id);
+            setSubToDelete(null);
+          }}
+          title="Supprimer le sous-paramètre"
+          message={`Voulez-vous vraiment supprimer le sous-paramètre « ${subToDelete?.title ?? ''} » ? Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
+
+        {/* NOUVEAU : confirmation avant suppression d'une liaison */}
+        <ConfirmModal
+          isOpen={Boolean(linkToDelete)}
+          onClose={() => setLinkToDelete(null)}
+          onConfirm={() => {
+            if (linkToDelete) onDeleteLink?.(linkToDelete.id);
+            setLinkToDelete(null);
+          }}
+          title="Supprimer la liaison"
+          message={`Voulez-vous vraiment supprimer la liaison « ${itemTitle} » entre ${airportName} et ${linkToDelete?.name ?? ''} ? Ses paramètres seront également supprimés. Cette action est irréversible.`}
+          confirmLabel="Supprimer"
+          cancelLabel="Annuler"
+        />
       </div>
     </div>
   );

@@ -18,7 +18,7 @@
 
 .network-item-detail {
   position: relative;
-  overflow: hidden;
+  /*overflow: hidden;*/
   background: var(--color-bg);
   padding: 1.25rem;
   border-radius: 12px;
