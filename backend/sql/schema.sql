@@ -1,8 +1,9 @@
 -- ============================================================================
 -- ASECNA Network — Script de création de la base MySQL (WampServer)
 -- État final : inclut déjà les migrations 0001 (schéma initial), 0002
--- (points techniques locaux, colonne in_local_network) et 0003 (direction/
--- type/circuit/@IP/port/statut sur les liaisons). Pour une base neuve
+-- (points techniques locaux, colonne in_local_network), 0003 (direction/
+-- type/circuit/@IP/port/statut sur les liaisons) et 0004 (table app_settings
+-- pour les clés d'inscription modifiables). Pour une base neuve
 -- uniquement — pour une base existante, voir sql/migration_00X_*.sql.
 -- ============================================================================
 
@@ -162,6 +163,12 @@ CREATE TABLE IF NOT EXISTS activity_logs (
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_activity_logs_user
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── app_settings (clés d'inscription modifiables par l'admin — migration 004) ──
+CREATE TABLE IF NOT EXISTS app_settings (
+  setting_key    VARCHAR(64)  PRIMARY KEY,
+  setting_value  VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================================

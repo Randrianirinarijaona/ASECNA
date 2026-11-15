@@ -28,3 +28,17 @@ class PaginatedActivityLogs(CamelModel):
     page: int
     page_size: int
     total_pages: int
+
+
+# ─── Clés d'inscription (Settings.tsx, administrateur uniquement) ──────────
+
+class RegistrationKeysOut(CamelModel):
+    """Valeurs actuellement exigées à l'inscription (JSON : adminKey / technicienCode)."""
+    admin_key: str
+    technicien_code: str
+
+
+class RegistrationKeysUpdate(CamelModel):
+    """Seuls les champs envoyés (non nuls) sont modifiés."""
+    admin_key: Optional[str] = None
+    technicien_code: Optional[str] = None

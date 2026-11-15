@@ -1,7 +1,9 @@
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.config import settings
 from app.core.security import create_access_token, verify_password
+from app.crud import app_setting as setting_crud
 from app.crud import user as user_crud
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -14,6 +16,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 def _to_user_out(user: User) -> UserOut:
     return UserOut(id=user.id, username=user.username, email=user.email, role=user.role, is_active=user.is_active, created_at=user.created_at, last_login=user.last_login, avatar_initials=user.get_avatar_initials())
+
+
+def _same_secret(provided: str | None, expected: str) -> bool:
+    """Comparaison en temps constant (évite de révéler la clé par le temps de réponse)."""
+    return secrets.compare_digest((provided or "").strip().encode("utf-8"), expected.encode("utf-8"))
 
 
 @router.post("/login", response_model=AuthResponse)
@@ -32,9 +39,15 @@ def login(payload: LoginPayload, db: Session = Depends(get_db)):
 def register(payload: RegisterPayload, db: Session = Depends(get_db)):
     if payload.password != payload.confirm_password:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Les mots de passe ne correspondent pas")
-    if payload.role == RoleEnum.admin and payload.admin_key != settings.ADMIN_REGISTRATION_KEY:
+    # MODIFIÉ : la clé Admin et le code technicien sont lus via app_setting
+    # (valeur modifiée par l'admin dans Settings, sinon valeur du .env).
+    if payload.role == RoleEnum.admin and not _same_secret(
+        payload.admin_key, setting_crud.get_admin_registration_key(db)
+    ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Clé administrateur invalide")
-    if payload.role == RoleEnum.technicien and payload.validation_code != settings.TECHNICIEN_VALIDATION_CODE:
+    if payload.role == RoleEnum.technicien and not _same_secret(
+        payload.validation_code, setting_crud.get_technicien_validation_code(db)
+    ):
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Code de validation technicien invalide")
     if user_crud.get_by_username(db, payload.username):
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Ce nom d'utilisateur est déjà pris")

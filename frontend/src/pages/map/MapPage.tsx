@@ -18,6 +18,7 @@ import LinkManagerModal from '../../components/map/LinkManagerModal';
 import NetworkNodeModal from '../../components/map/NetworkNodeModal';
 import LinkDetailModal from '../../components/map/LinkDetailModal';
 import LocalNetworkModal from '../../components/map/LocalNetworkModal';
+import NetworkItemModal from '../../components/map/NetworkItemModal';
 import { Modal } from '../../components/ui/Modal';
 import { Spinner } from '../../components/ui/Spinner';
 
@@ -25,6 +26,7 @@ import { useAirportsData } from '../../hooks/useAirportsData';
 import {
   getNetworkLinkColor,
   getAirportsByNetwork,
+  matchesNetworkSubItem,
   NETWORK_CATEGORY_LABELS,
   LINK_DIRECTION_LABELS,
 } from '../../data/networkCategories';
@@ -214,6 +216,8 @@ export default function MapPage() {
   } | null>(null);
 
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
+  // SMA : point technique (VHF / HF) dont on affiche directement NetworkItemModal.
+  const [selectedSmaPointKey, setSelectedSmaPointKey] = useState<string | null>(null);
   const [showAddAirport, setShowAddAirport] = useState(false);
 
   const [linkingState, setLinkingState] = useState<{
@@ -298,6 +302,32 @@ export default function MapPage() {
     setNewPointName('');
   }, []);
 
+  // En SMA, seuls les points techniques VHF/HF sont affichés (aucun
+  // aéroport) et un clic ouvre directement NetworkItemModal.
+  const isSmaUsage = networkUsage?.category === 'sma';
+
+  const selectedSmaPoint = useMemo(() => {
+    if (!selectedSmaPointKey || !networkUsage || !isSmaUsage) return null;
+    const airport = airports[selectedSmaPointKey];
+    if (!airport?.isTechnicalPoint) return null;
+    const item = (airport.sections[networkUsage.category] || []).find((i) =>
+      matchesNetworkSubItem(networkUsage.category, i.title, networkUsage.subItem)
+    );
+    return item ? { key: selectedSmaPointKey, airport, item } : null;
+  }, [selectedSmaPointKey, networkUsage, isSmaUsage, airports]);
+
+  const handleTechnicalNodeClick = (key: string) => {
+    if (isSmaUsage) {
+      if (!canAccessNetworkSettings) {
+        showToast('Accès réservé : votre compte est en lecture seule.', 'warning');
+        return;
+      }
+      setSelectedSmaPointKey(key);
+      return;
+    }
+    handleAirportMarkerClick(key);
+  };
+
   const handleAirportMarkerClick = (key: string) => {
     if (linkingState) {
       if (key !== linkingState.fromAirportKey) {
@@ -339,6 +369,7 @@ export default function MapPage() {
 
   const handleNetworkSubItemClick = (category: NetworkCategoryKey, subItem: string) => {
     setSelectedAirportKey(null);
+    setSelectedSmaPointKey(null);
     setNetworkUsage({ category, subItem });
   };
 
@@ -427,6 +458,7 @@ export default function MapPage() {
           onModuleChange={(module) => {
             setActiveModule(module);
             setSelectedAirportKey(null);
+            setSelectedSmaPointKey(null);
             setNetworkUsage(null);
             setSelectedLinkId(null);
             setLinkManager(null);
@@ -543,9 +575,11 @@ export default function MapPage() {
               }}
             />
 
-            {(activeModule === 'aeroport' ||
-              (activeModule === 'reseauLocal' && !zoomedLocalAirportKey) ||
-              Boolean(networkUsage)) &&
+            {/* SMA (VHF / HF) : aucun point d'aéroport, uniquement les points techniques. */}
+            {!isSmaUsage &&
+              (activeModule === 'aeroport' ||
+                (activeModule === 'reseauLocal' && !zoomedLocalAirportKey) ||
+                Boolean(networkUsage)) &&
               Object.entries(airports)
                 .filter(([, a]) => !a.isTechnicalPoint)
                 .map(([key, airport]) => (
@@ -583,8 +617,8 @@ export default function MapPage() {
               <AirportMarker
                 key={key}
                 airport={airport}
-                onClick={() => handleAirportMarkerClick(key)}
-                isSelected={selectedAirportKey === key}
+                onClick={() => handleTechnicalNodeClick(key)}
+                isSelected={isSmaUsage ? selectedSmaPointKey === key : selectedAirportKey === key}
               />
             ))}
 
@@ -684,6 +718,39 @@ export default function MapPage() {
           }}
           onDelete={(key) => deleteAirport(key)}
           onClose={() => setNodeManager(null)}
+        />
+      )}
+
+      {selectedSmaPoint && networkUsage && (
+        <NetworkItemModal
+          key={selectedSmaPoint.key}
+          itemTitle={selectedSmaPoint.item.title}
+          itemStatus={(selectedSmaPoint.item.status as 'operational' | 'maintenance') || 'operational'}
+          itemDescription={selectedSmaPoint.item.description}
+          subParameters={selectedSmaPoint.item.subParameters || []}
+          airportName={selectedSmaPoint.airport.name}
+          category={networkUsage.category}
+          airportKey={selectedSmaPoint.key}
+          isAdmin={isAdmin}
+          onClose={() => setSelectedSmaPointKey(null)}
+          onUpdateItem={(_newTitle, newStatus, newDesc) => {
+            const { key, item } = selectedSmaPoint;
+            if (newStatus !== (item.status || 'operational')) {
+              updateNetworkItemStatus(key, networkUsage.category, item.title, newStatus);
+            }
+            if ((newDesc || '') !== (item.description || '')) {
+              updateNetworkItemDescription(key, networkUsage.category, item.title, newDesc || '');
+            }
+          }}
+          onAddSubParameter={(title, value) =>
+            addItemSubParameter(selectedSmaPoint.key, networkUsage.category, selectedSmaPoint.item.title, title, value)
+          }
+          onDeleteSubParameter={(subId) =>
+            deleteItemSubParameter(selectedSmaPoint.key, networkUsage.category, selectedSmaPoint.item.title, subId)
+          }
+          onToggleSubParameterStatus={(subId) =>
+            toggleItemSubParameterStatus(selectedSmaPoint.key, networkUsage.category, selectedSmaPoint.item.title, subId)
+          }
         />
       )}
 

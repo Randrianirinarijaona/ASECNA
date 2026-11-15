@@ -7,6 +7,7 @@ import type {
   AdminStats,
   ActivityLog,
   PaginatedResponse,
+  RegistrationKeys,
 } from '../types';
 import { getAuthHeaders, removeToken } from '../utils/jwt';
 
@@ -127,4 +128,15 @@ export const adminService = {
     request<PaginatedResponse<ActivityLog>>(
       `/admin/logs?page=${page}&page_size=${pageSize}`
     ),
+
+  // Clé de sécurité Admin / code de validation technicien (admin uniquement).
+  getRegistrationKeys: (): Promise<RegistrationKeys> =>
+    request<RegistrationKeys>('/admin/registration-keys'),
+
+  // N'envoyer que les champs modifiés ; la réponse contient les deux valeurs.
+  updateRegistrationKeys: (payload: Partial<RegistrationKeys>): Promise<RegistrationKeys> =>
+    request<RegistrationKeys>('/admin/registration-keys', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
 };

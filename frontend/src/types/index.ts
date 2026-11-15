@@ -79,6 +79,13 @@ export interface ActivityLog {
   createdAt: string;
 }
 
+// ─── Clés d'inscription (Settings.tsx, administrateur uniquement) ────────
+// Réponse de GET/PUT /admin/registration-keys.
+export interface RegistrationKeys {
+  adminKey: string;        // « clé de sécurité Admin »
+  technicienCode: string;  // « code de validation technicien »
+}
+
 // ─── Toasts (ToastContext.tsx) ──────────────────────────────────────────
 // Manquait du fichier fourni initialement mais importé par ToastContext.tsx
 // et ToastStack.tsx.

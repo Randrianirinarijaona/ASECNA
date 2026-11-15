@@ -74,6 +74,7 @@ export default function NetworkNodeModal({
           {mode === 'add' ? (
             <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
               <div className="form-group text-left">
+                 
                 <label className="form-label">Nom de l'endroit</label>
                 <input
                   className="form-input"

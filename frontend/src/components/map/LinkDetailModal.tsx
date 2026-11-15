@@ -316,7 +316,7 @@ export default function LinkDetailModal({
 
           <div className="network-modal-category">
             <div className="network-modal-category-header">
-              <h3>Paramètres de la liaison</h3>
+              <h3>Paramètres de la liaison </h3>
               {isAdmin && (
                 <button
                   className="icon-btn"
@@ -394,7 +394,7 @@ export default function LinkDetailModal({
                   {param.values.map((value) => (
                     <div key={value.id} className="network-item-card sub-parameter-card">
                       {editingValueId === value.id ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6,}}>
                           <input
                             className="form-input"
                             placeholder="Nom de la valeur"
@@ -431,7 +431,8 @@ export default function LinkDetailModal({
                           </span>
                           {isAdmin && (
                             <>
-                              <button
+                              <div style={ {marginInlineStart: 'auto'} }>
+                                <button
                                 className="icon-btn icon-btn--sm"
                                 title="Modifier cette valeur"
                                 onClick={() => startEditValue(value.id, value.name, value.text)}
@@ -448,6 +449,7 @@ export default function LinkDetailModal({
                               >
                                 <Trash2 size={13} />
                               </button>
+                              </div>
                             </>
                           )}
                         </div>
@@ -478,6 +480,7 @@ export default function LinkDetailModal({
                         <button className="btn btn-primary btn-sm" onClick={() => handleAddValue(param.id)}>
                           Ajouter
                         </button>
+                  
                       </div>
                     ) : (
                       <button

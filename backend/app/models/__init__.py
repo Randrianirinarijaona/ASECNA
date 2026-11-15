@@ -11,3 +11,4 @@ from app.models.local_point import (  # noqa: F401
     LocalTechnicalPoint, LocalTechnicalPointParameter, LocalTechnicalPointParameterValue,
 )
 from app.models.log import ActivityLog  # noqa: F401
+from app.models.app_setting import AppSetting  # noqa: F401

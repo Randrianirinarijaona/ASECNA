@@ -104,6 +104,20 @@ export interface AirportNetworkMatch {
   status?: 'operational' | 'maintenance' | 'planned';
 }
 
+// Un item « correspond » à un sous-réseau choisi dans la sidebar.
+// SMA : égalité stricte, sinon « HF » serait aussi trouvé dans « VHF »
+// (la chaîne "vhf" contient "hf"). Autres catégories : comportement
+// historique (le titre contient le sous-réseau, ex. "AMHS" -> "AMHS/RSFTA").
+export function matchesNetworkSubItem(
+  category: NetworkCategoryKey,
+  itemTitle: string,
+  subItem: string
+): boolean {
+  const title = itemTitle.toLowerCase();
+  const wanted = subItem.toLowerCase();
+  return category === 'sma' ? title === wanted : title.includes(wanted);
+}
+
 export function getAirportsByNetwork(
   airportsData: Record<string, Airport>,
   category: NetworkCategoryKey,
@@ -113,9 +127,7 @@ export function getAirportsByNetwork(
 
   Object.entries(airportsData).forEach(([key, airport]) => {
     const items = airport.sections[category] || [];
-    const match = items.find((item) =>
-      item.title.toLowerCase().includes(subItem.toLowerCase())
-    );
+    const match = items.find((item) => matchesNetworkSubItem(category, item.title, subItem));
     if (match) {
       results.push({ key, airport, matchedTitle: match.title, status: match.status });
     }
