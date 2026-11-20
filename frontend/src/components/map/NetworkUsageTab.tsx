@@ -40,15 +40,15 @@ export default function NetworkUsageTab({
         <div>
           <span className="network-usage-category">{NETWORK_CATEGORY_LABELS[category]}</span>
           <h3>{subItem}</h3>
-          <p className="network-usage-count">{matches.length} aéroport(s) utilisent ce réseau</p>
+          <p className="network-usage-count">{matches.length} Airport(s) use this network</p>
         </div>
         <div className="network-usage-actions">
           {isAdmin && (
             <button className="btn btn-secondary btn-sm" onClick={() => setShowAddPicker((v) => !v)}>
-              <Plus size={14} /> Associer un aéroport
+              <Plus size={14} /> Join an Airport
             </button>
           )}
-          <button className="icon-btn" onClick={onClose} title="Fermer">
+          <button className="icon-btn" onClick={onClose} title="Close">
             <X size={18} />
           </button>
         </div>
@@ -56,7 +56,7 @@ export default function NetworkUsageTab({
 
       {showAddPicker && (
         <div className="network-usage-add-picker">
-          {availableToAdd.length === 0 && <p className="network-empty">Tous les aéroports utilisent déjà ce réseau.</p>}
+          {availableToAdd.length === 0 && <p className="network-empty">All airports already use this network.</p>}
           {availableToAdd.map(([key, airport]) => (
             <button
               key={key}
@@ -74,7 +74,7 @@ export default function NetworkUsageTab({
 
       <div className="network-usage-list">
         {matches.length === 0 && (
-          <p className="network-empty">Aucun aéroport ne référence ce réseau pour le moment.</p>
+          <p className="network-empty">No airport.</p>
         )}
         {matches.map(({ key, airport, matchedTitle, status }) => (
           <div key={key} className="network-usage-item">
@@ -88,7 +88,7 @@ export default function NetworkUsageTab({
             {isAdmin && (
               <button
                 className="icon-btn icon-btn--danger icon-btn--sm"
-                title="Retirer cet aéroport"
+                title="Remote this Airport"
                 onClick={() => onRemoveAirport(key, matchedTitle)}
               >
                 <Trash2 size={14} />

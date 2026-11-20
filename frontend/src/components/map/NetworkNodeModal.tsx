@@ -60,12 +60,12 @@ export default function NetworkNodeModal({
       <div className="network-modal" style={{ maxWidth: 480 }}>
         <div className="network-modal-header">
           <div>
-            <h2>{mode === 'add' ? 'Ajouter un réseau' : 'Supprimer un réseau'}</h2>
+            <h2>{mode === 'add' ? 'Add network' : 'Delete network'}</h2>
             <p className="network-modal-subtitle">
               {NETWORK_CATEGORY_LABELS[category]} • {subItem}
             </p>
           </div>
-          <button className="icon-btn" title="Fermer" onClick={onClose}>
+          <button className="icon-btn" title="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
@@ -75,7 +75,7 @@ export default function NetworkNodeModal({
             <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
               <div className="form-group text-left">
                  
-                <label className="form-label">Nom de l'endroit</label>
+                <label className="form-label">Name of the place</label>
                 <input
                   className="form-input"
                   placeholder="ex: Relais VHF Antsirabe"
@@ -101,13 +101,13 @@ export default function NetworkNodeModal({
                 disabled={!name.trim()}
                 onClick={handleCreate}
               >
-                Créer le point technique
+                Create tecnical point
               </button>
             </div>
           ) : (
             <>
               {matchingNodes.length === 0 && (
-                <p className="network-empty">Aucun point technique à supprimer pour ce sous-réseau</p>
+                <p className="network-empty">No technical point </p>
               )}
               <div className="network-item-grid" style={{ gridTemplateColumns: '1fr' }}>
                 {matchingNodes.map(([key, a]) => (
@@ -116,7 +116,7 @@ export default function NetworkNodeModal({
                       <span className="network-item-title" style={{ fontWeight: 600 }}>{a.name}</span>
                       <button
                         className="icon-btn icon-btn--danger icon-btn--sm"
-                        title="Supprimer ce point"
+                        title="Delete this point"
                         onClick={() => onDelete(key)}
                       >
                         <Trash2 size={13} />

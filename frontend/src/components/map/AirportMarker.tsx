@@ -32,7 +32,7 @@ export default function AirportMarker({ airport, onClick, isSelected }: Props) {
         eventHandlers: { click: onClick },
       } as any)}
     >
-      <Tooltip
+      <Tooltip permanent
         {...({
           direction: 'top',
           offset: [0, -16],

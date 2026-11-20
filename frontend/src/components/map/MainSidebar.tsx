@@ -87,7 +87,7 @@ export default function MainSidebar({
   return (
     <aside className="main-sidebar">
       <div className="main-sidebar-header">
-        <span className="main-sidebar-title">Réseau ASECNA</span>
+        <span className="main-sidebar-title">ASECNA NETWORK</span>
       </div>
 
       <nav className="main-sidebar-nav">
@@ -96,12 +96,12 @@ export default function MainSidebar({
           onClick={() => handleModuleClick('aeroport')}
         >
           <MapPin size={18} />
-          <span>Aéroport</span>
+          <span>Airport</span>
         </button>
 
         {activeModule === 'aeroport' && isAdmin && (
           <button className="main-sidebar-add-btn" onClick={onAddAirportClick}>
-            <Plus size={15} /> Ajouter un aéroport
+            <Plus size={15} /> Add Airport
           </button>
         )}
 
@@ -110,7 +110,7 @@ export default function MainSidebar({
           onClick={() => handleModuleClick('reseaux')}
         >
           <Network size={18} />
-          <span>Liaison</span>
+          <span>Link</span>
         </button>
 
         {activeModule === 'reseaux' && (
@@ -152,13 +152,13 @@ export default function MainSidebar({
                                     className="sidebar-action-btn"
                                     onClick={() => onAddLinkClick(category, subItem)}
                                   >
-                                    <Link2 size={12} /> Ajouter une liaison
+                                    <Link2 size={12} /> Add Link
                                   </button>
                                   <button
                                     className="sidebar-action-btn sidebar-action-btn--danger"
                                     onClick={() => onRemoveLinkClick(category, subItem)}
                                   >
-                                    <Unlink size={12} /> Supprimer une liaison
+                                    <Unlink size={12} /> Remove Link
                                   </button>
                                 </>
                               ) : (
@@ -167,13 +167,13 @@ export default function MainSidebar({
                                     className="sidebar-action-btn"
                                     onClick={() => onAddNetworkNodeClick(category, subItem)}
                                   >
-                                    <Plus size={12} /> Ajouter un réseau
+                                    <Plus size={12} /> Add Network
                                   </button>
                                   <button
                                     className="sidebar-action-btn sidebar-action-btn--danger"
                                     onClick={() => onRemoveNetworkNodeClick(category, subItem)}
                                   >
-                                    <Trash2 size={12} /> Supprimer un réseau
+                                    <Trash2 size={12} /> Delete Network
                                   </button>
                                 </>
                               )}
@@ -197,7 +197,7 @@ export default function MainSidebar({
             onClick={() => handleModuleClick('reseauLocal')}
           >
             <RadioTower size={18} />
-            <span>Réseau local</span>
+            <span>Local Network</span>
           </button>
         )}
       </nav>
@@ -209,7 +209,7 @@ export default function MainSidebar({
               className="main-sidebar-add-btn"
               onClick={() => setShowLocalAddPicker((v) => !v)}
             >
-              <Plus size={15} /> Ajouter un aéroport
+              <Plus size={15} /> Add Airport
             </button>
           )}
 

@@ -90,7 +90,7 @@ export default function LinkManagerModal({
       <div className="network-modal" style={{ maxWidth: 480 }}>
         <div className="network-modal-header">
           <div>
-            <h2>{mode === 'add' ? 'Ajouter une liaison' : 'Supprimer une liaison'}</h2>
+            <h2>{mode === 'add' ? 'Add Link' : 'Delete Link'}</h2>
             <p className="network-modal-subtitle">{subItem}</p>
           </div>
           <button className="icon-btn" title="Fermer" onClick={onClose}>
@@ -106,7 +106,7 @@ export default function LinkManagerModal({
               </p>
             ) : (
               <div className="network-add-form" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                <label>Aéroport de départ</label>
+                <label>Departure Airport</label>
                 <input
                   className="form-input"
                   value={
@@ -118,9 +118,9 @@ export default function LinkManagerModal({
                   readOnly
                 />
 
-                <label>Aéroport d'arrivée</label>
+                <label>Arrival Airport</label>
                 <select className="form-input" value={toKey} onChange={(e) => setToKey(e.target.value)}>
-                  <option value="">— Choisir —</option>
+                  <option value="">— Select —</option>
                   {airportEntries.map(([key, a]) => (
                     <option key={key} value={key}>
                       {a.iata ? `${a.iata} — ${a.name}` : a.name}
@@ -139,7 +139,7 @@ export default function LinkManagerModal({
                   <option value="both">{LINK_DIRECTION_LABELS.both}</option>
                 </select>
 
-                <label>Type (optionnel)</label>
+                <label>Type (Optional)</label>
                 <input
                   className="form-input"
                   value={linkType}
@@ -147,7 +147,7 @@ export default function LinkManagerModal({
                   placeholder="ex: Fibre optique"
                 />
 
-                <label>Circuit (optionnel)</label>
+                <label>Circuit (Optional)</label>
                 <input
                   className="form-input"
                   value={circuit}
@@ -179,14 +179,14 @@ export default function LinkManagerModal({
                   disabled={!canSubmit}
                   onClick={handleCreate}
                 >
-                  Créer la liaison
+                  Create Link
                 </button>
               </div>
             )
           ) : (
             <>
               {matchingLinks.length === 0 && (
-                <p className="network-empty">Aucune liaison à supprimer pour ce sous-réseau</p>
+                <p className="network-empty">No link deleted</p>
               )}
               <div className="network-item-grid">
                 {matchingLinks.map((link) => {
@@ -220,7 +220,7 @@ export default function LinkManagerModal({
                         <span className="network-item-title">{linkLabel}</span>
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
-                          title="Supprimer cette liaison"
+                          title="Delete this Link"
                           // MODIFIÉ : demande de confirmation au lieu d'une
                           // suppression immédiate.
                           onClick={() => setLinkToDelete({ id: link.id, label: linkLabel })}
@@ -244,8 +244,8 @@ export default function LinkManagerModal({
             if (linkToDelete) onDeleteLink(linkToDelete.id);
             setLinkToDelete(null);
           }}
-          title="Supprimer la liaison"
-          message={`Voulez-vous vraiment supprimer la liaison « ${subItem} » ${linkToDelete?.label ?? ''} ? Ses paramètres seront également supprimés. Cette action est irréversible.`}
+          title="Delete link"
+          message={`Do you delete this link « ${subItem} » ${linkToDelete?.label ?? ''} ?  this parameters will also be deleted. This action is irreversible.`}
           confirmLabel="Supprimer"
           cancelLabel="Annuler"
         />

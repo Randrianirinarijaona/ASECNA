@@ -86,7 +86,7 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
     <div className="add-airport-overlay" onClick={onClose}>
       <div className="add-airport-modal" onClick={(e) => e.stopPropagation()}>
         <div className="add-airport-header">
-          <h2>Nouvel aéroport</h2>
+          <h2>New Airport</h2>
           <button className="add-airport-close" onClick={onClose}>
             <X size={18} />
           </button>
@@ -94,7 +94,7 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
 
         <div className="add-airport-form">
           <label>
-            Nom
+            Name
             <input
               className="form-input"
               value={name}
@@ -104,7 +104,7 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
           </label>
           <label>
             {/* MODIFIÉ : indication "(optionnel)" */}
-            Code IATA (optionnel)
+            IATA (optionnel)
             <input
               className="form-input"
               value={iata}
@@ -135,7 +135,7 @@ export default function AddAirportModal({ existingKeys, onClose, onSubmit }: Add
           </div>
           {error && <p className="add-airport-error">{error}</p>}
           <button className="btn btn-primary" onClick={handleSubmit}>
-            Créer l'aéroport
+            Create Airport
           </button>
         </div>
       </div>

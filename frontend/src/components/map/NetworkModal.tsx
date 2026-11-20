@@ -150,7 +150,7 @@ export default function NetworkModal({
                   className="form-input"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Nom de l'aéroport"
+                  placeholder="Airport name"
                   autoFocus
                 />
                 <input
@@ -162,10 +162,10 @@ export default function NetworkModal({
                 />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-primary btn-sm" disabled={!editName.trim()} onClick={saveAirportEdit}>
-                    <Check size={14} /> Enregistrer
+                    <Check size={14} /> Save
                   </button>
                   <button className="btn btn-secondary btn-sm" onClick={() => setEditingAirport(false)}>
-                    Annuler
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -174,7 +174,7 @@ export default function NetworkModal({
                 <h2>
                   {airport.name} <span className="iata">({airport.iata || '—'})</span>
                 </h2>
-                <p className="network-modal-subtitle">Paramètres du réseau actif</p>
+                <p className="network-modal-subtitle">Network parameter active</p>
               </>
             )}
           </div>
@@ -182,7 +182,7 @@ export default function NetworkModal({
             {isAdmin && onUpdateAirport && !editingAirport && (
               <button
                 className="icon-btn"
-                title="Modifier l'aéroport"
+                title="setting Airport"
                 onClick={startEditingAirport}
               >
                 <Edit2 size={16} />
@@ -191,7 +191,7 @@ export default function NetworkModal({
             {isAdmin && (
               <button
                 className="icon-btn icon-btn--danger"
-                title="Supprimer cet aéroport"
+                title="Delete this Airport"
                 // MODIFIÉ : ouvre la confirmation au lieu de supprimer
                 // immédiatement.
                 onClick={() => setConfirmDeleteAirport(true)}
@@ -199,7 +199,7 @@ export default function NetworkModal({
                 <Trash2 size={16} />
               </button>
             )}
-            <button className="icon-btn" title="Fermer" onClick={onClose}>
+            <button className="icon-btn" title="close" onClick={onClose}>
               <X size={18} />
             </button>
           </div>
@@ -216,7 +216,7 @@ export default function NetworkModal({
                   {isAdmin && (
                     <button
                       className="icon-btn icon-btn--sm"
-                      title="Ajouter un paramètre"
+                      title="Add parameter"
                       onClick={() => setAddingTo(addingTo === category ? null : category)}
                     >
                       <Plus size={14} />
@@ -225,7 +225,7 @@ export default function NetworkModal({
                 </div>
 
                 {items.length === 0 && (
-                  <p className="network-empty">Aucun paramètre configuré</p>
+                  <p className="network-empty">No parameter</p>
                 )}
 
                 <div className="network-item-grid">
@@ -276,14 +276,14 @@ export default function NetworkModal({
                   <div className="network-add-form">
                     <input
                       className="form-input"
-                      placeholder="Nom du paramètre (ex: AIDC)"
+                      placeholder="Parameter name (ex: AIDC)"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddSubmit(category)}
                       autoFocus
                     />
                     <button className="btn btn-primary btn-sm" onClick={() => handleAddSubmit(category)}>
-                      Ajouter
+                      Add
                     </button>
                   </div>
                 )}

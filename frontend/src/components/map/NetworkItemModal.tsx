@@ -227,11 +227,11 @@ export default function NetworkItemModal({
           {hasLinkContext && (
             <div className="network-modal-category">
               <div className="network-modal-category-header">
-                <h3>Aéroports liés</h3>
+                <h3>Airport Links</h3>
                 {isAdmin && onStartLink && canStartLinkFromHere && (
                   <button
                     className="icon-btn icon-btn--sm"
-                    title="Créer une nouvelle liaison"
+                    title="Add new link"
                     onClick={onStartLink}
                   >
                     <Plus size={14} />
@@ -240,7 +240,7 @@ export default function NetworkItemModal({
               </div>
 
               {linkedAirports.length === 0 && (
-                <p className="network-empty">Aucune liaison pour ce paramètre</p>
+                <p className="network-empty">No Link</p>
               )}
 
               <div className="network-item-grid-params">
@@ -299,7 +299,7 @@ export default function NetworkItemModal({
             </div>
 
             {subParameters.length === 0 && (
-              <p className="network-empty">Aucun sous-paramètre configuré</p>
+              <p className="network-empty">No parameter</p>
             )}
 
             <div className="network-item-grid">
@@ -321,7 +321,7 @@ export default function NetworkItemModal({
                         )}
                         <button
                           className="icon-btn icon-btn--danger icon-btn--sm"
-                          title="Supprimer ce sous-paramètre"
+                          title="Delete parameter"
                           onClick={() => setSubToDelete(sub)}
                         >
                           <Trash2 size={13} />
@@ -337,24 +337,24 @@ export default function NetworkItemModal({
 
             {showAddSub && (
               <div className="network-add-form-panel">
-                <h4>Nouveau sous-paramètre</h4>
+                <h4>New value</h4>
                 <div className="network-add-form-grid">
                   <input
                     className="form-input"
-                    placeholder="Nom (ex: Fréquence)"
+                    placeholder="Name (ex: Fréquence)"
                     value={newSubTitle}
                     onChange={e => setNewSubTitle(e.target.value)}
                   />
                   <input
                     className="form-input"
-                    placeholder="Valeur (ex: 123.450 MHz)"
+                    placeholder="value (ex: 123.450 MHz)"
                     value={newSubValue}
                     onChange={e => setNewSubValue(e.target.value)}
                   />
                 </div>
                 <div className="network-add-form-actions">
-                  <button className="btn btn-secondary btn-sm" onClick={() => setShowAddSub(false)}>Annuler</button>
-                  <button className="btn btn-primary btn-sm" onClick={addSubParameter}>Ajouter</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowAddSub(false)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" onClick={addSubParameter}>Add</button>
                 </div>
               </div>
             )}
@@ -370,9 +370,9 @@ export default function NetworkItemModal({
             setSubToDelete(null);
           }}
           title="Supprimer le sous-paramètre"
-          message={`Voulez-vous vraiment supprimer le sous-paramètre « ${subToDelete?.title ?? ''} » ? Cette action est irréversible.`}
-          confirmLabel="Supprimer"
-          cancelLabel="Annuler"
+          message={`Do you want delete this parameter « ${subToDelete?.title ?? ''} » ? This action is irreversible`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
         />
 
         {/* NOUVEAU : confirmation avant suppression d'une liaison */}
@@ -384,9 +384,9 @@ export default function NetworkItemModal({
             setLinkToDelete(null);
           }}
           title="Supprimer la liaison"
-          message={`Voulez-vous vraiment supprimer la liaison « ${itemTitle} » entre ${airportName} et ${linkToDelete?.name ?? ''} ? Ses paramètres seront également supprimés. Cette action est irréversible.`}
-          confirmLabel="Supprimer"
-          cancelLabel="Annuler"
+          message={`Do you want delete this link ? « ${itemTitle} »  ${airportName} and ${linkToDelete?.name ?? ''} ? This parameters will also be deleted. This action is irreversible`}
+          confirmLabel="delete"
+          cancelLabel="Cancel"
         />
       </div>
     </div>

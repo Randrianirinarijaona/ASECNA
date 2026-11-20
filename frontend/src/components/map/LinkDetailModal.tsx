@@ -151,7 +151,7 @@ export default function LinkDetailModal({
         <div className="network-modal-header">
           <div>
             <h2>
-              Liaison entre {fromAirport.name} et {toAirport.name}
+              Link between {fromAirport.name} and {toAirport.name}
             </h2>
             <p className="network-modal-subtitle">
               <span
@@ -177,7 +177,7 @@ export default function LinkDetailModal({
         <div className="network-modal-body network-modal-body--scroll">
           <div className="network-modal-category">
             <div className="network-modal-category-header">
-              <h3>Informations de la liaison</h3>
+              <h3>Link Informations</h3>
               {isAdmin && onUpdateLink && !editingInfo && (
                 <button
                   className="icon-btn"
@@ -244,10 +244,10 @@ export default function LinkDetailModal({
                     disabled={!editIp.trim() || !editPort.trim()}
                     onClick={saveEditInfo}
                   >
-                    <Check size={13} /> Enregistrer
+                    <Check size={13} /> Save
                   </button>
                   <button className="btn btn-secondary btn-sm" onClick={() => setEditingInfo(false)}>
-                    Annuler
+                    Cancel
                   </button>
                 </div>
               </div>
@@ -306,9 +306,9 @@ export default function LinkDetailModal({
                   value={link.status}
                   onChange={(e) => onUpdateStatus(link.id, e.target.value as LinkStatus)}
                 >
-                  <option value="operational">Opérationnel</option>
-                  <option value="maintenance">En maintenance</option>
-                  <option value="out_of_service">Hors service</option>
+                  <option value="operational">Operational</option>
+                  <option value="maintenance">Under maintenance</option>
+                  <option value="out_of_service">Out of service</option>
                 </select>
               )}
             </div>
@@ -316,7 +316,7 @@ export default function LinkDetailModal({
 
           <div className="network-modal-category">
             <div className="network-modal-category-header">
-              <h3>Paramètres de la liaison </h3>
+              <h3>Link parameters </h3>
               {isAdmin && (
                 <button
                   className="icon-btn"
@@ -329,7 +329,7 @@ export default function LinkDetailModal({
             </div>
 
             {parameters.length === 0 && (
-              <p className="network-empty">Aucun paramètre configuré pour cette liaison</p>
+              <p className="network-empty">No parameter configured for this link</p>
             )}
 
             {parameters.map((param) => (
@@ -387,7 +387,7 @@ export default function LinkDetailModal({
                 </div>
 
                 {param.values.length === 0 && (
-                  <p className="network-empty">Aucune valeur pour ce paramètre</p>
+                  <p className="network-empty">No value for this parameter</p>
                 )}
 
                 <div className="network-item-grid-params">
@@ -414,13 +414,13 @@ export default function LinkDetailModal({
                               className="btn btn-primary btn-sm"
                               onClick={() => saveEditValue(param.id, value.id)}
                             >
-                              <Check size={13} /> Enregistrer
+                              <Check size={13} /> Save
                             </button>
                             <button
                               className="btn btn-secondary btn-sm"
                               onClick={() => setEditingValueId(null)}
                             >
-                              Annuler
+                              Cancel
                             </button>
                           </div>
                         </div>
@@ -478,7 +478,7 @@ export default function LinkDetailModal({
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
                         />
                         <button className="btn btn-primary btn-sm" onClick={() => handleAddValue(param.id)}>
-                          Ajouter
+                          Add
                         </button>
                   
                       </div>
@@ -492,7 +492,7 @@ export default function LinkDetailModal({
                           setNewValueText('');
                         }}
                       >
-                        <Plus size={12} /> Ajouter une valeur
+                        <Plus size={12} /> Add value
                       </button>
                     )}
                   </>
@@ -511,7 +511,7 @@ export default function LinkDetailModal({
                   autoFocus
                 />
                 <button className="btn btn-primary btn-sm" onClick={handleAddParameter}>
-                  Ajouter
+                  Add
                 </button>
               </div>
             )}

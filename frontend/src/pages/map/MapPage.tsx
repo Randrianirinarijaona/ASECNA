@@ -142,15 +142,31 @@ function OffscreenAirportIndicators({ targets }: { targets: OffscreenTarget[] })
         );
         const edgePoint = L.point(center.x + dx * scale, center.y + dy * scale);
         const edgeLatLng = map.containerPointToLatLng(edgePoint);
-        const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
 
         const icon = L.divIcon({
           className: 'offscreen-indicator-icon',
           html: `
-            <div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-50%);pointer-events:none;">
-              <div style="font-size:20px;line-height:1;color:${target.color};transform:rotate(${angleDeg}deg);text-shadow:0 1px 3px rgba(0,0,0,0.4);">➜</div>
-              <div style="margin-top:2px;background:var(--color-card,#ffffff);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;color:${target.color};border:1px solid var(--color-border,#e2e8f0);white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.15);">${escapeHtmlForIndicator(target.name)}</div>
-            </div>
+            <div style="
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              transform:translate(-50%,-50%);
+              pointer-events:none;
+            ">
+            <div style="
+              background:var(--color-card,#ffffff);
+              padding:4px 10px;
+              border-radius:10px;
+              font-size:11px;
+              font-weight:600;
+              color:${target.color};
+              border:1px solid var(--color-border,#e2e8f0);
+              white-space:nowrap;
+              box-shadow:0 2px 6px rgba(0,0,0,0.15);
+            ">
+            ${escapeHtmlForIndicator(target.name)}
+          </div>
+          </div>
           `,
           iconSize: [0, 0],
         });
@@ -499,10 +515,10 @@ export default function MapPage() {
           {linkingState && (
             <div className="linking-banner">
               <span>
-                Cliquez sur l'aéroport à lier pour « <strong>{linkingState.itemTitle}</strong> »
+                Click on the airport to link « <strong>{linkingState.itemTitle}</strong> »
               </span>
               <button className="linking-banner-cancel" onClick={() => setLinkingState(null)}>
-                Annuler
+                Cancel
               </button>
             </div>
           )}
@@ -510,17 +526,17 @@ export default function MapPage() {
           {zoomedLocalAirportKey && airports[zoomedLocalAirportKey] && (
             <div className="linking-banner">
               <span>
-                Vue locale : <strong>{airports[zoomedLocalAirportKey].name}</strong>
-                {addingLocalPointMode && ' — Cliquez sur la carte pour placer le point'}
+                Local view : <strong>{airports[zoomedLocalAirportKey].name}</strong>
+                {addingLocalPointMode && ' — Click on the map to place a point'}
               </span>
               {isAdmin && !addingLocalPointMode && (
                 <button className="sidebar-action-btn" onClick={() => setAddingLocalPointMode(true)}>
-                  <Plus size={12} /> Ajouter un point technique
+                  <Plus size={12} /> Add technical point
                 </button>
               )}
               {addingLocalPointMode && (
                 <button className="linking-banner-cancel" onClick={() => setAddingLocalPointMode(false)}>
-                  Annuler
+                  Cancel
                 </button>
               )}
               <button
@@ -531,7 +547,7 @@ export default function MapPage() {
                   setAddingLocalPointMode(false);
                 }}
               >
-                Retour à la vue générale
+                back
               </button>
             </div>
           )}
@@ -803,12 +819,12 @@ export default function MapPage() {
       <Modal
         isOpen={Boolean(pendingPointCoords)}
         onClose={closePendingPoint}
-        title="Nouveau point technique"
+        title="New technical point"
         size="sm"
         footer={
           <div className="modal-footer-actions">
             <button className="btn btn-secondary" onClick={closePendingPoint}>
-              Annuler
+              Cancel
             </button>
             <button
               className="btn btn-primary"
@@ -825,19 +841,19 @@ export default function MapPage() {
                 closePendingPoint();
               }}
             >
-              Créer
+              Create
             </button>
           </div>
         }
       >
         <div className="form-group text-left">
-          <label className="form-label">Nom du point</label>
+          <label className="form-label">Point name</label>
           <input
             className="form-input"
             autoFocus
             value={newPointName}
             onChange={(e) => setNewPointName(e.target.value)}
-            placeholder="ex: Groupe électrogène nord"
+            placeholder="ex: Tour de contrôle"
           />
         </div>
       </Modal>
@@ -873,7 +889,7 @@ export default function MapPage() {
                   closePendingLinkDetails();
                 }}
               >
-                Créer la liaison
+                Create link
               </button>
             </div>
           }

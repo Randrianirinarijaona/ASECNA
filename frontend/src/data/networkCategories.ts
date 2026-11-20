@@ -48,9 +48,9 @@ export const ANTANANARIVO_AIRPORT_KEY = 'TNR';
 export type LinkDirection = 'incoming' | 'outgoing' | 'both';
 
 export const LINK_DIRECTION_LABELS: Record<LinkDirection, string> = {
-  outgoing: 'Sortant',
-  incoming: 'Entrant',
-  both: 'Entrant et sortant',
+  outgoing: 'Outgoing',
+  incoming: 'Incoming',
+  both: 'Incoming and Outgoing',
 };
 
 export const LINK_DIRECTION_GLYPH: Record<LinkDirection, string> = {

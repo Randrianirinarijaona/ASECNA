@@ -96,7 +96,7 @@ export default function Admin() {
     <div className="page admin-page">
       <div className="page-header">
         <h1 className="page-title">Administration</h1>
-        <p className="page-subtitle">Gestion des utilisateurs et supervision du réseau</p>
+        <p className="page-subtitle">User management and network supervision</p>
       </div>
 
       {stats && (
@@ -105,28 +105,28 @@ export default function Admin() {
             <div className="stat-icon" style={{ background: 'rgba(99,102,241,0.12)' }}><Users size={20} /></div>
             <div className="stat-body">
               <div className="stat-value">{stats.totalUsers}</div>
-              <div className="stat-label">Utilisateurs ({stats.activeUsers} actifs)</div>
+              <div className="stat-label">User ({stats.activeUsers} actifs)</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(34,197,94,0.12)' }}><Plane size={20} /></div>
             <div className="stat-body">
               <div className="stat-value">{stats.totalAirports}</div>
-              <div className="stat-label">Aéroports</div>
+              <div className="stat-label">Airports</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(245,158,11,0.12)' }}><Radio size={20} /></div>
             <div className="stat-body">
               <div className="stat-value">{stats.totalTechnicalPoints}</div>
-              <div className="stat-label">Points techniques</div>
+              <div className="stat-label">Technical point</div>
             </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'rgba(96,165,250,0.12)' }}><Network size={20} /></div>
             <div className="stat-body">
               <div className="stat-value">{stats.totalLinks}</div>
-              <div className="stat-label">Liaisons</div>
+              <div className="stat-label">Links</div>
             </div>
           </div>
         </div>
@@ -134,16 +134,16 @@ export default function Admin() {
 
       <div className="dashboard-section">
         <div className="section-header">
-          <h2 className="section-title">Utilisateurs</h2>
+          <h2 className="section-title">User</h2>
         </div>
         <div className="card">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Utilisateur</th>
+                <th>User</th>
                 <th>Email</th>
-                <th>Rôle</th>
-                <th>Statut</th>
+                <th>Role</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -193,11 +193,11 @@ export default function Admin() {
       <div className="dashboard-section">
         <div className="section-header">
           <h2 className="section-title">
-            <Shield size={16} /> Journal d'activité
+            <Shield size={16} /> Activity log
           </h2>
         </div>
         <div className="card activity-card">
-          {logs.length === 0 && <p className="network-empty">Aucune activité enregistrée</p>}
+          {logs.length === 0 && <p className="network-empty">No activity recorded</p>}
           {logs.map((log) => (
             <div key={log.id} className="activity-item">
               <span className="activity-time">{new Date(log.createdAt).toLocaleString('fr-FR')}</span>
@@ -213,7 +213,7 @@ export default function Admin() {
         onClose={() => setPendingDelete(null)}
         onConfirm={handleDelete}
         title="Supprimer l'utilisateur"
-        message={`Voulez-vous vraiment supprimer le compte "${pendingDelete?.username}" ? Cette action est irréversible.`}
+        message={`Do you really want to delete this account "${pendingDelete?.username}" ? This action is irreversible.`}
         confirmLabel="Supprimer"
       />
     </div>

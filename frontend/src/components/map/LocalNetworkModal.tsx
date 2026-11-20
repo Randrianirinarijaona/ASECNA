@@ -75,7 +75,7 @@ export default function LocalNetworkModal({
             <h2>
               {airport.name} {airport.iata && <span className="iata">({airport.iata})</span>}
             </h2>
-            <p className="network-modal-subtitle">Informations locales</p>
+            <p className="network-modal-subtitle">Local Informations</p>
           </div>
           <div className="network-modal-header-actions">
             {isAdmin && onDelete && (
@@ -96,11 +96,11 @@ export default function LocalNetworkModal({
         <div className="network-modal-body">
           <div className="network-modal-category">
             <div className="network-modal-category-header">
-              <h3>Paramètres locaux</h3>
+              <h3>Local Paramètres</h3>
               {isAdmin && (
                 <button
                   className="icon-btn"
-                  title="Ajouter un paramètre"
+                  title="Add parameter"
                   onClick={() => setShowAddParam(!showAddParam)}
                 >
                   <Plus size={14} />
@@ -109,7 +109,7 @@ export default function LocalNetworkModal({
             </div>
 
             {localParameters.length === 0 && (
-              <p className="network-empty">Aucune information locale configurée pour cet aéroport</p>
+              <p className="network-empty">No local information configured for this Airport</p>
             )}
 
             {localParameters.map((param) => (
@@ -119,7 +119,7 @@ export default function LocalNetworkModal({
                   {isAdmin && (
                     <button
                       className="icon-btn icon-btn--danger icon-btn--sm"
-                      title="Supprimer ce paramètre"
+                      title="Delete"
                       // MODIFIÉ : demande de confirmation au lieu d'une
                       // suppression immédiate.
                       onClick={() => setParamToDelete({ id: param.id, name: param.name })}
@@ -130,7 +130,7 @@ export default function LocalNetworkModal({
                 </div>
 
                 {param.values.length === 0 && (
-                  <p className="network-empty">Aucune valeur pour ce paramètre</p>
+                  <p className="network-empty">No value</p>
                 )}
 
                 <div className="network-item-grid-params">
@@ -163,7 +163,7 @@ export default function LocalNetworkModal({
                       <div className="network-add-form" style={{ flexDirection: 'column', gap: 6 }}>
                         <input
                           className="form-input"
-                          placeholder="Nom de la valeur (ex: Groupe électrogène)"
+                          placeholder="Value name (ex: IP)"
                           value={newValueName}
                           onChange={(e) => setNewValueName(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
@@ -171,13 +171,13 @@ export default function LocalNetworkModal({
                         />
                         <input
                           className="form-input"
-                          placeholder="Valeur (ex: Opérationnel, testé le 12/07)"
+                          placeholder="Value (ex: 10.10.2.50) "
                           value={newValueText}
                           onChange={(e) => setNewValueText(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddValue(param.id)}
                         />
                         <button className="btn btn-primary btn-sm" onClick={() => handleAddValue(param.id)}>
-                          Ajouter
+                          Add
                         </button>
                       </div>
                     ) : (
@@ -190,7 +190,7 @@ export default function LocalNetworkModal({
                           setNewValueText('');
                         }}
                       >
-                        <Plus size={12} /> Ajouter une valeur
+                        <Plus size={12} /> Add value
                       </button>
                     )}
                   </>
@@ -202,14 +202,14 @@ export default function LocalNetworkModal({
               <div className="network-add-form">
                 <input
                   className="form-input"
-                  placeholder="Nom du paramètre (ex: Alimentation électrique)"
+                  placeholder="Parameter name (ex: Adress)"
                   value={newParamName}
                   onChange={(e) => setNewParamName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddParameter()}
                   autoFocus
                 />
                 <button className="btn btn-primary btn-sm" onClick={handleAddParameter}>
-                  Ajouter
+                  Add
                 </button>
               </div>
             )}
@@ -224,10 +224,10 @@ export default function LocalNetworkModal({
             if (paramToDelete) onDeleteParameter(paramToDelete.id);
             setParamToDelete(null);
           }}
-          title="Supprimer le paramètre"
-          message={`Voulez-vous vraiment supprimer le paramètre « ${paramToDelete?.name ?? ''} » et toutes ses valeurs ? Cette action est irréversible.`}
-          confirmLabel="Supprimer"
-          cancelLabel="Annuler"
+          title="Delete parameter"
+          message={`Do you want delete this parameter « ${paramToDelete?.name ?? ''} » et toutes ses valeurs ? Cette action est irréversible.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
         />
 
         {/* NOUVEAU : confirmation avant suppression d'une valeur locale */}
@@ -238,10 +238,10 @@ export default function LocalNetworkModal({
             if (valueToDelete) onDeleteValue(valueToDelete.paramId, valueToDelete.id);
             setValueToDelete(null);
           }}
-          title="Supprimer la valeur"
-          message={`Voulez-vous vraiment supprimer la valeur « ${valueToDelete?.name ?? ''} » ? Cette action est irréversible.`}
-          confirmLabel="Supprimer"
-          cancelLabel="Annuler"
+          title="Delete value"
+          message={`Do you want delete this value « ${valueToDelete?.name ?? ''} » ? Cette action est irréversible.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
         />
       </div>
     </div>
